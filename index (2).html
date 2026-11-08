@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0f1720">
+<title>AbschleppRadar – Pannenhilfe & Abschleppdienst in Ihrer Nähe</title>
+<meta name="description" content="Abschleppdienst oder Pannenhilfe sofort anfordern – Abschlepper in Ihrer Nähe nehmen den Auftrag direkt an.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--bg:#0f1720;--panel:#16212d;--panel2:#1d2b3a;--line:#2a3a4c;--text:#eef3f8;--muted:#93a4b7;--accent:#ff9f1c;--accent2:#ffb84d;--green:#2ecc71;--red:#ff5c5c;--blue:#4da3ff;--radius:14px}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit}
+a{color:var(--accent)}
+.app{max-width:560px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column}
+header{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(15,23,32,.96);backdrop-filter:blur(6px);z-index:1000}
+.logo{display:flex;align-items:center;gap:9px;font-weight:800;font-size:19px;letter-spacing:-.3px;cursor:pointer}
+.logo span{color:var(--accent)}
+.hbtn{margin-left:auto;background:none;border:1px solid var(--line);color:var(--muted);border-radius:10px;padding:7px 12px;cursor:pointer;display:none}
+.hbtn+.hbtn{margin-left:6px}
+main{flex:1;padding:18px}
+.view{display:none;animation:fade .25s ease}.view.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+h1{font-size:26px;line-height:1.2;margin:6px 0 8px;letter-spacing:-.5px}
+h2{font-size:20px;margin:4px 0 14px;letter-spacing:-.3px}
+h3{font-size:13px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin:22px 0 10px;font-weight:600}
+.lead{color:var(--muted);margin:0 0 22px;line-height:1.5}
+.choice{display:flex;align-items:center;gap:16px;width:100%;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px;margin-bottom:14px;color:var(--text);cursor:pointer;transition:.15s}
+.choice:hover{border-color:var(--accent);transform:translateY(-1px)}
+.choice .ic{width:58px;height:58px;border-radius:16px;display:grid;place-items:center;flex:none}
+.choice.k .ic{background:rgba(255,159,28,.15)}.choice.f .ic{background:rgba(77,163,255,.15)}
+.choice b{display:block;font-size:18px;margin-bottom:3px}.choice small{color:var(--muted);font-size:14px;line-height:1.4}
+.soon{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
+.soon span{font-size:12px;color:var(--muted);border:1px dashed var(--line);border-radius:20px;padding:5px 11px}
+label{display:block;font-size:14px;color:var(--muted);margin:12px 0 6px}
+input,select,textarea{width:100%;background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:12px;padding:12px 13px;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+textarea{min-height:70px;resize:vertical}
+.row{display:flex;gap:10px}.row>*{flex:1;min-width:0}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:22px;padding:9px 14px;cursor:pointer;font-size:14px}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#1a1200;font-weight:600}
+.seg{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px}
+.seg button{flex:1;background:none;border:0;color:var(--muted);padding:10px;border-radius:9px;cursor:pointer;font-weight:600}
+.seg button.on{background:var(--panel2);color:var(--text)}
+.btn{display:block;width:100%;background:var(--accent);color:#1a1200;border:0;border-radius:14px;padding:15px;font-weight:700;font-size:16px;cursor:pointer;margin-top:22px;text-align:center;text-decoration:none}
+.btn:hover{background:var(--accent2)}.btn:disabled{opacity:.5;cursor:wait}
+.btn.ghost{background:none;border:1px solid var(--line);color:var(--text);font-weight:600}
+.btn.blue{background:var(--blue);color:#041526}.btn.red{background:none;border:1px solid var(--red);color:var(--red)}
+.btn.small{padding:11px;font-size:14px;margin-top:10px}
+.hint{font-size:13px;color:var(--muted);margin-top:6px;line-height:1.45}
+.msg{font-size:14px;margin-top:12px;padding:11px 13px;border-radius:12px;display:none;line-height:1.4}
+.msg.err{display:block;background:rgba(255,92,92,.12);color:#ffb3b3;border:1px solid rgba(255,92,92,.35)}
+.msg.ok{display:block;background:rgba(46,204,113,.12);color:#a8f0c6;border:1px solid rgba(46,204,113,.35)}
+.check{display:flex;gap:10px;align-items:flex-start;margin-top:16px;font-size:14px;color:var(--muted);line-height:1.4}
+.check input{width:20px;height:20px;flex:none;margin-top:1px;accent-color:var(--accent)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+.summary div{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
+.summary div:last-child{border:0}.summary span:first-child{color:var(--muted)}.summary span:last-child{text-align:right;word-break:break-word}
+.center{text-align:center}
+.pulse{width:120px;height:120px;margin:10px auto 18px;position:relative}
+.pulse i{position:absolute;inset:0;border:2px solid var(--accent);border-radius:50%;animation:pul 2.2s infinite;opacity:0}
+.pulse i:nth-child(2){animation-delay:.7s}.pulse i:nth-child(3){animation-delay:1.4s}
+.pulse b{position:absolute;inset:44px;background:var(--accent);border-radius:50%}
+.pulse.done i{display:none}.pulse.done b{background:var(--green);inset:30px}
+@keyframes pul{0%{transform:scale(.3);opacity:1}100%{transform:scale(1);opacity:0}}
+.gpsbox{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;font-size:14px}
+.gpsbox.ok{border-color:var(--green)}
+.status{display:flex;gap:8px}
+.status button{flex:1;border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:12px;padding:11px 6px;cursor:pointer;font-weight:600;font-size:14px}
+.status button.on[data-s=verfuegbar]{background:rgba(46,204,113,.15);border-color:var(--green);color:var(--green)}
+.status button.on[data-s=im_einsatz]{background:rgba(255,159,28,.15);border-color:var(--accent);color:var(--accent)}
+.status button.on[data-s=offline]{background:rgba(255,92,92,.12);border-color:var(--red);color:var(--red)}
+#map{height:320px;border-radius:var(--radius);border:1px solid var(--line);margin-top:14px;z-index:1}
+.leaflet-container{background:#1d2b3a;font-family:Inter,sans-serif}
+.radius-row{display:flex;align-items:center;gap:12px}
+.radius-row input[type=range]{flex:1;padding:0;accent-color:var(--accent);background:none;border:0}
+.radius-row b{min-width:62px;text-align:right}
+.req{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:10px;cursor:pointer;display:flex;gap:12px;align-items:center}
+.req:hover{border-color:var(--accent)}
+.req .em{width:44px;height:44px;border-radius:12px;background:var(--panel2);display:grid;place-items:center;font-size:22px;flex:none}
+.req .mid{flex:1;min-width:0}.req .mid b{display:block;font-size:15px}
+.req .mid small{color:var(--muted);font-size:13px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.req .km{text-align:right;font-weight:700;color:var(--accent)}.req .km small{display:block;color:var(--muted);font-weight:500;font-size:12px}
+.tag{display:inline-block;font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;margin-left:6px;vertical-align:middle}
+.tag.new{background:rgba(255,159,28,.18);color:var(--accent)}.tag.ok{background:rgba(46,204,113,.18);color:var(--green)}.tag.plan{background:rgba(77,163,255,.18);color:var(--blue)}
+.empty{color:var(--muted);text-align:center;padding:22px 10px;font-size:14px;border:1px dashed var(--line);border-radius:var(--radius)}
+.sheet{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:flex-end;justify-content:center;z-index:2000}
+.sheet.open{display:flex}
+.sheet .inner{background:var(--bg);border:1px solid var(--line);border-radius:22px 22px 0 0;width:100%;max-width:560px;max-height:88vh;overflow:auto;padding:20px 18px 26px;animation:up .25s ease}
+@keyframes up{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--line);padding:12px 18px;border-radius:12px;font-size:14px;display:none;z-index:3000;max-width:90%}
+footer{padding:16px 18px 24px;color:var(--muted);font-size:12px;text-align:center;border-top:1px solid var(--line);line-height:1.6}
+footer a{color:var(--muted)}
+.kpis{display:flex;gap:10px;margin-top:14px}
+.kpis div{flex:1;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center}
+.kpis b{display:block;font-size:20px}.kpis small{color:var(--muted);font-size:12px}
+.phone{font-size:20px;font-weight:700;letter-spacing:.3px;margin:4px 0}
+.live{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+.live i{width:8px;height:8px;border-radius:50%;background:var(--green);animation:blink 1.6s infinite}
+@keyframes blink{50%{opacity:.3}}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <div class="logo" onclick="go('start')">
+    <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14" fill="none" stroke="#ff9f1c" stroke-width="2"/><circle cx="16" cy="16" r="8" fill="none" stroke="#ff9f1c" stroke-width="1.5" opacity=".6"/><path d="M16 16 L27 9" stroke="#ff9f1c" stroke-width="2.4" stroke-linecap="round"/><circle cx="16" cy="16" r="2.6" fill="#ff9f1c"/></svg>
+    Abschlepp<span>Radar</span>
+  </div>
+  <button class="hbtn" id="backBtn" onclick="back()">← Zurück</button>
+  <button class="hbtn" id="logoutBtn" onclick="logout()">Abmelden</button>
+</header>
+
+<main>
+<!-- START -->
+<section class="view active" id="v-start">
+  <h1>Pannenhilfe in Ihrer Nähe – schnell und direkt.</h1>
+  <p class="lead">Wählen Sie, wie Sie AbschleppRadar nutzen möchten.</p>
+  <button class="choice k" onclick="go('kunde')">
+    <div class="ic"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ff9f1c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.6"/></svg></div>
+    <div><b>Ich brauche Hilfe</b><small>Abschleppdienst oder Pannenhilfe anfordern – sofort oder zum Wunschtermin.</small></div>
+  </button>
+  <button class="choice f" onclick="openDriver()">
+    <div class="ic"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#4da3ff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 16V9h9v7"/><path d="M11 11h4l3 3v2h-7"/><path d="M14 9l6-5"/><circle cx="6" cy="17" r="1.8"/><circle cx="16" cy="17" r="1.8"/></svg></div>
+    <div><b>Ich bin Abschlepper</b><small>Aufträge im Umkreis sehen, annehmen und direkt losfahren.</small></div>
+  </button>
+  <button class="btn ghost small" id="lastReqBtn" style="display:none" onclick="showOk()">Meine letzte Anfrage ansehen</button>
+  <div class="soon"><span>Bald: Autowäsche</span><span>Werkstätten</span><span>Reifenservice</span></div>
+</section>
+
+<!-- KUNDE -->
+<section class="view" id="v-kunde">
+  <h2>Hilfe anfordern</h2>
+  <form id="kForm" novalidate>
+    <h3>1 · Ihr Standort</h3>
+    <div class="gpsbox" id="gpsBox"><span id="gpsTxt">Standort noch nicht ermittelt</span></div>
+    <button type="button" class="btn ghost small" id="geoBtn">📍 Standort automatisch ermitteln</button>
+    <div id="manualLoc">
+      <label for="kOrt">Ort / PLZ</label>
+      <input id="kOrt" placeholder="z. B. 47798 Krefeld">
+    </div>
+    <label for="kStr">Straße, Hausnr. oder Autobahn-km</label>
+    <input id="kStr" placeholder="z. B. Ostwall 120 oder A57 km 12">
+
+    <h3>2 · Ihr Fahrzeug</h3>
+    <div class="row">
+      <div><label for="kMarke">Marke</label><input id="kMarke" list="marken" placeholder="z. B. Mercedes"></div>
+      <div><label for="kModell">Modell</label><input id="kModell" placeholder="z. B. B180"></div>
+    </div>
+    <datalist id="marken"><option>Audi</option><option>BMW</option><option>Citroën</option><option>Dacia</option><option>Fiat</option><option>Ford</option><option>Hyundai</option><option>Kia</option><option>Mercedes-Benz</option><option>Nissan</option><option>Opel</option><option>Peugeot</option><option>Renault</option><option>Seat</option><option>Skoda</option><option>Tesla</option><option>Toyota</option><option>VW</option></datalist>
+    <label for="kKz">Kennzeichen <span style="opacity:.6">(optional)</span></label>
+    <input id="kKz" placeholder="KR-AB 123">
+
+    <h3>3 · Was ist passiert?</h3>
+    <div class="chips" id="probChips"></div>
+    <div id="zielBox" style="display:none">
+      <label for="kZiel">Wohin soll das Fahrzeug?</label>
+      <input id="kZiel" placeholder="Werkstatt oder Adresse">
+    </div>
+    <label for="kNote">Beschreibung <span style="opacity:.6">(optional)</span></label>
+    <textarea id="kNote" placeholder="z. B. Auto springt nicht an, Warnblinker an"></textarea>
+
+    <h3>4 · Wann?</h3>
+    <div class="seg" id="whenSeg"><button type="button" data-v="sofort" class="on">Sofort</button><button type="button" data-v="termin">Termin wählen</button></div>
+    <div class="row" id="terminBox" style="display:none">
+      <div><label for="kDatum">Datum</label><input type="date" id="kDatum"></div>
+      <div><label for="kZeit">Uhrzeit</label><input type="time" id="kZeit"></div>
+    </div>
+
+    <h3>5 · Kontakt</h3>
+    <label for="kName">Name</label><input id="kName" autocomplete="name">
+    <label for="kTel">Telefon</label><input id="kTel" type="tel" autocomplete="tel" placeholder="0151 …">
+    <label for="kMail">E-Mail <span style="opacity:.6">(optional)</span></label><input id="kMail" type="email" autocomplete="email">
+    <label class="check"><input type="checkbox" id="kDs"> Ich bin einverstanden, dass mein Standort und meine Angaben an Abschleppdienste im Umkreis weitergegeben werden. Meine Telefonnummer sieht nur der Abschlepper, der den Auftrag annimmt.</label>
+    <div class="msg" id="kMsg"></div>
+    <button class="btn" type="submit" id="kSubmit">Hilfe anfordern</button>
+  </form>
+</section>
+
+<!-- BESTÄTIGUNG / STATUS -->
+<section class="view" id="v-ok">
+  <div class="center">
+    <div class="pulse" id="okPulse"><i></i><i></i><i></i><b></b></div>
+    <h2 id="okTitle">Anfrage gesendet</h2>
+    <p class="lead" id="okText">Wir suchen einen Abschlepper in Ihrer Nähe …</p>
+  </div>
+  <div class="card" id="okDriver" style="display:none"></div>
+  <div class="center" style="margin-top:12px"><span class="live"><i></i>Status wird automatisch aktualisiert</span></div>
+  <button class="btn red small" id="cancelBtn" onclick="cancelReq()">Anfrage stornieren</button>
+  <button class="btn ghost small" onclick="go('start')">Zur Startseite</button>
+</section>
+
+<!-- FAHRER: LOGIN / REGISTRIERUNG -->
+<section class="view" id="v-login">
+  <h2>Für Abschlepper</h2>
+  <div class="seg" id="authSeg"><button type="button" data-v="login" class="on">Anmelden</button><button type="button" data-v="signup">Registrieren</button></div>
+  <form id="authForm" novalidate>
+    <div id="signupFields" style="display:none">
+      <label for="aFirma">Firmenname</label><input id="aFirma" placeholder="Auto Transport Adler">
+      <label for="aTel">Telefon (für Kunden sichtbar)</label><input id="aTel" type="tel" placeholder="0151 …">
+    </div>
+    <label for="aMail">E-Mail</label><input id="aMail" type="email" autocomplete="email">
+    <label for="aPw">Passwort</label><input id="aPw" type="password" autocomplete="current-password" placeholder="mind. 8 Zeichen">
+    <div class="msg" id="aMsg"></div>
+    <button class="btn blue" type="submit" id="aSubmit">Anmelden</button>
+  </form>
+  <p class="hint" style="margin-top:16px">Neue Abschlepper werden nach der Registrierung geprüft und freigeschaltet. Erst danach sind Aufträge sichtbar.</p>
+</section>
+
+<!-- FAHRER: PROFIL ERGÄNZEN -->
+<section class="view" id="v-profil">
+  <h2>Firmenprofil</h2>
+  <p class="lead">Bitte ergänzen Sie Ihre Firmendaten.</p>
+  <label for="pFirma">Firmenname</label><input id="pFirma">
+  <label for="pTel">Telefon (für Kunden sichtbar)</label><input id="pTel" type="tel">
+  <div class="msg" id="pMsg"></div>
+  <button class="btn blue" onclick="saveProfile()">Speichern</button>
+</section>
+
+<!-- FAHRER: WARTET AUF FREISCHALTUNG -->
+<section class="view" id="v-wait">
+  <div class="center">
+    <div class="pulse"><i></i><i></i><i></i><b style="background:var(--blue)"></b></div>
+    <h2>Registrierung eingegangen</h2>
+    <p class="lead" id="waitTxt">Ihr Konto wird geprüft. Sobald es freigeschaltet ist, sehen Sie hier die Aufträge in Ihrer Nähe.</p>
+  </div>
+  <button class="btn ghost" onclick="loadDriver()">Erneut prüfen</button>
+</section>
+
+<!-- FAHRER: DASHBOARD -->
+<section class="view" id="v-fahrer">
+  <h2 id="fHello">Aufträge</h2>
+  <div class="status" id="statusBtns">
+    <button data-s="verfuegbar">● Verfügbar</button>
+    <button data-s="im_einsatz">● Im Einsatz</button>
+    <button data-s="offline">● Offline</button>
+  </div>
+  <div class="gpsbox" id="fGps" style="margin-top:12px"><span id="fGpsTxt">Standort wird ermittelt …</span></div>
+  <label>Einsatz-Umkreis</label>
+  <div class="radius-row"><input type="range" id="rad" min="5" max="150" step="5" value="30"><b id="radVal">30 km</b></div>
+  <div id="map"></div>
+  <div class="kpis"><div><b id="kIn">0</b><small>im Umkreis</small></div><div><b id="kOut">0</b><small>außerhalb</small></div><div><b id="kMine">0</b><small>angenommen</small></div></div>
+  <div style="display:flex;justify-content:space-between;align-items:center"><h3>Aufträge</h3><span class="live"><i></i>live</span></div>
+  <div id="reqList"></div>
+</section>
+</main>
+
+<footer>
+  AbschleppRadar · ein Service von <a href="https://www.autotransportadler.com" target="_blank" rel="noopener">Auto Transport Adler</a><br>
+  <a href="https://www.autotransportadler.com" target="_blank" rel="noopener">Impressum</a> · <a href="https://www.autotransportadler.com" target="_blank" rel="noopener">Datenschutz</a> · Karten © OpenStreetMap-Mitwirkende
+</footer>
+</div>
+
+<div class="sheet" id="sheet" onclick="if(event.target===this)closeSheet()"><div class="inner" id="sheetIn"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ================= Konfiguration =================
+const SUPABASE_URL = "https://tgpabumwznytuplybejc.supabase.co";
+const SUPABASE_KEY = "sb_publishable_aJ8s0M0GtuVna3LgBpD9jw_rGGA7TMp";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const PROBS = [["abschleppen","🚛","Abschleppen"],["starthilfe","🔋","Starthilfe"],["reifen","🛞","Reifenwechsel"],["schluessel","🔑","Ausgesperrt"],["kraftstoff","⛽","Kein Kraftstoff"],["unfall","⚠️","Unfall"],["sonstiges","🔧","Sonstiges"]];
+const P = Object.fromEntries(PROBS.map(p=>[p[0],{e:p[1],t:p[2]}]));
+const KREFELD = [51.3331, 6.5623];
+
+// ================= Hilfsfunktionen =================
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const store = { get(k){ try{ return JSON.parse(localStorage.getItem(k)); }catch(e){ return null; } }, set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }, del(k){ try{ localStorage.removeItem(k); }catch(e){} } };
+function toast(m){ const t=$("toast"); t.textContent=m; t.style.display="block"; clearTimeout(toast.h); toast.h=setTimeout(()=>t.style.display="none",3000); }
+function msg(id, text, ok){ const el=$(id); if(!text){ el.className="msg"; el.textContent=""; return; } el.className="msg "+(ok?"ok":"err"); el.textContent=text; }
+function dist(a,b){ const R=6371, r=x=>x*Math.PI/180; const dLa=r(b[0]-a[0]), dLo=r(b[1]-a[1]); const h=Math.sin(dLa/2)**2+Math.cos(r(a[0]))*Math.cos(r(b[0]))*Math.sin(dLo/2)**2; return 2*R*Math.asin(Math.sqrt(h)); }
+function ago(t){ const m=Math.round((Date.now()-new Date(t))/60000); if(m<1) return "gerade eben"; if(m<60) return "vor "+m+" Min."; const h=Math.round(m/60); return h<24 ? "vor "+h+" Std." : "vor "+Math.round(h/24)+" Tg."; }
+function whenTxt(r){ if(r.wann==="sofort") return "Sofort"; return "Termin "+new Date(r.termin).toLocaleString("de-DE",{weekday:"short",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}); }
+function km(d){ return d.toFixed(1).replace(".",","); }
+function errText(e){ const m=(e&&e.message)||String(e); if(/Failed to fetch|NetworkError/i.test(m)) return "Keine Verbindung – bitte Internet prüfen."; if(/Invalid login/i.test(m)) return "E-Mail oder Passwort falsch."; if(/already registered/i.test(m)) return "Diese E-Mail ist bereits registriert – bitte anmelden."; if(/Email not confirmed/i.test(m)) return "Bitte bestätigen Sie zuerst Ihre E-Mail-Adresse (Link im Postfach)."; if(/Password should be/i.test(m)) return "Das Passwort muss mindestens 8 Zeichen haben."; return m; }
+
+function getPos(opts){ return new Promise((res,rej)=>{ if(!navigator.geolocation) return rej(new Error("GPS nicht verfügbar")); navigator.geolocation.getCurrentPosition(p=>res(p), e=>rej(e), opts||{enableHighAccuracy:true,timeout:12000,maximumAge:30000}); }); }
+async function reverseGeo(lat,lng){
+  try{ const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=de`); const j=await r.json(); const a=j.address||{};
+    return { str:[a.road||a.pedestrian||a.motorway||"", a.house_number||""].join(" ").trim(), ort:[a.postcode||"", a.city||a.town||a.village||a.suburb||a.county||""].join(" ").trim() };
+  }catch(e){ return null; }
+}
+async function geocode(q){
+  try{ const r=await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=de,nl,be&accept-language=de&q=${encodeURIComponent(q)}`); const j=await r.json(); if(j&&j[0]) return [parseFloat(j[0].lat), parseFloat(j[0].lon)]; }catch(e){}
+  return null;
+}
+
+// ================= Navigation =================
+let hist=[], current="start";
+function go(v, push=true){
+  if(push && current!==v) hist.push(current);
+  if(v==="start") hist=[];
+  document.querySelectorAll(".view").forEach(x=>x.classList.remove("active"));
+  $("v-"+v).classList.add("active"); current=v;
+  $("backBtn").style.display = v==="start" ? "none" : "block";
+  $("logoutBtn").style.display = ["fahrer","wait","profil"].includes(v) ? "block" : "none";
+  if(v!=="ok") stopStatusPoll();
+  if(v==="fahrer") setTimeout(()=>{ initMap(); map.invalidateSize(); renderDriver(); },50);
+  if(v==="start") $("lastReqBtn").style.display = store.get("ar_last") ? "block" : "none";
+  window.scrollTo(0,0);
+}
+function back(){ const p=hist.pop(); go(p||"start", false); }
+
+// ================= KUNDE =================
+let selProb=new Set(), when="sofort", gps=null;
+$("probChips").innerHTML = PROBS.map(p=>`<button type="button" class="chip" data-p="${p[0]}">${p[1]} ${p[2]}</button>`).join("");
+$("probChips").onclick = e => { const b=e.target.closest(".chip"); if(!b) return; const p=b.dataset.p; selProb.has(p)?selProb.delete(p):selProb.add(p); b.classList.toggle("on"); $("zielBox").style.display = selProb.has("abschleppen") ? "block" : "none"; };
+$("whenSeg").onclick = e => { const b=e.target.closest("button"); if(!b) return; when=b.dataset.v; [...$("whenSeg").children].forEach(x=>x.classList.toggle("on",x===b)); $("terminBox").style.display = when==="termin" ? "flex" : "none"; };
+
+$("geoBtn").onclick = async () => {
+  $("gpsTxt").textContent="Standort wird ermittelt …";
+  try{
+    const p = await getPos();
+    gps = { lat:p.coords.latitude, lng:p.coords.longitude, acc:Math.round(p.coords.accuracy) };
+    $("gpsBox").classList.add("ok");
+    $("gpsTxt").textContent = `✅ Standort erkannt (Genauigkeit ca. ${gps.acc} m)`;
+    const a = await reverseGeo(gps.lat, gps.lng);
+    if(a){ if(a.ort) $("kOrt").value=a.ort; if(a.str && !$("kStr").value) $("kStr").value=a.str; $("gpsTxt").textContent = `✅ ${a.str?a.str+", ":""}${a.ort} (±${gps.acc} m)`; }
+  }catch(e){
+    gps=null; $("gpsBox").classList.remove("ok");
+    $("gpsTxt").textContent = "Standort konnte nicht ermittelt werden. Bitte Standortfreigabe im Browser erlauben oder Adresse unten eingeben.";
+  }
+};
+
+$("kForm").onsubmit = async e => {
+  e.preventDefault();
+  const v=id=>$(id).value.trim(); const errs=[];
+  if(!gps && !v("kOrt")) errs.push("Standort ermitteln oder Ort eingeben");
+  if(!v("kStr")) errs.push("Straße bzw. genauen Standort angeben");
+  if(!v("kMarke")) errs.push("Fahrzeugmarke angeben");
+  if(!selProb.size) errs.push("Problem auswählen");
+  if(selProb.has("abschleppen") && !v("kZiel")) errs.push("Zieladresse für das Abschleppen angeben");
+  if(when==="termin" && (!v("kDatum")||!v("kZeit"))) errs.push("Datum und Uhrzeit wählen");
+  if(!v("kName")) errs.push("Name angeben");
+  if(v("kTel").replace(/\D/g,"").length<6) errs.push("gültige Telefonnummer angeben");
+  if(!$("kDs").checked) errs.push("Einverständnis bestätigen");
+  if(errs.length) return msg("kMsg","Bitte noch: "+errs.join(", ")+".");
+  msg("kMsg",""); $("kSubmit").disabled=true; $("kSubmit").textContent="Wird gesendet …";
+  try{
+    let lat, lng;
+    if(gps){ lat=gps.lat; lng=gps.lng; }
+    else{
+      const c = await geocode(v("kStr")+", "+v("kOrt")) || await geocode(v("kOrt"));
+      if(!c) throw new Error("Adresse wurde nicht gefunden. Bitte Ort/PLZ prüfen oder Standort automatisch ermitteln.");
+      [lat,lng]=c;
+    }
+    const termin = when==="termin" ? new Date(`${v("kDatum")}T${v("kZeit")}`).toISOString() : null;
+    const { data, error } = await sb.rpc("create_request", {
+      p_lat:lat, p_lng:lng, p_ort:v("kOrt"), p_strasse:v("kStr"), p_marke:v("kMarke"), p_modell:v("kModell"), p_kennzeichen:v("kKz"),
+      p_probleme:[...selProb], p_ziel:v("kZiel"), p_notiz:v("kNote"), p_wann:when, p_termin:termin,
+      p_name:v("kName"), p_tel:v("kTel"), p_mail:v("kMail") });
+    if(error) throw error;
+    store.set("ar_last", { id:data.id, nr:data.nr, token:data.token, t:Date.now() });
+    $("kForm").reset(); selProb.clear(); gps=null; document.querySelectorAll("#probChips .chip").forEach(c=>c.classList.remove("on"));
+    $("zielBox").style.display="none"; $("gpsBox").classList.remove("ok"); $("gpsTxt").textContent="Standort noch nicht ermittelt";
+    showOk();
+  }catch(err){ msg("kMsg", errText(err)); }
+  finally{ $("kSubmit").disabled=false; $("kSubmit").textContent="Hilfe anfordern"; }
+};
+
+let statusTimer=null;
+function stopStatusPoll(){ clearInterval(statusTimer); statusTimer=null; }
+function showOk(){ go("ok"); refreshStatus(); stopStatusPoll(); statusTimer=setInterval(refreshStatus, 10000); }
+async function refreshStatus(){
+  const last=store.get("ar_last"); if(!last) return;
+  const { data, error } = await sb.rpc("get_request_status", { p_id:last.id, p_token:last.token });
+  if(error || !data){ $("okTitle").textContent="Anfrage nicht gefunden"; $("okText").textContent=""; return; }
+  const s=data.status; $("okDriver").style.display="none"; $("cancelBtn").style.display = ["neu","angenommen"].includes(s) ? "block" : "none"; $("okPulse").classList.toggle("done", s!=="neu");
+  if(s==="neu"){ $("okTitle").textContent=`Anfrage Nr. ${data.nr} gesendet`; $("okText").textContent="Abschlepper in Ihrer Nähe wurden benachrichtigt. Bitte bleiben Sie erreichbar – sobald jemand annimmt, sehen Sie es hier."; }
+  else if(s==="angenommen"){ $("okTitle").textContent="Abschlepper ist unterwegs 🚛"; $("okText").textContent="Ihr Auftrag wurde angenommen. Der Abschlepper meldet sich telefonisch bei Ihnen.";
+    $("okDriver").style.display="block"; $("okDriver").innerHTML=`<div style="color:var(--muted);font-size:13px">${esc(data.firma)}</div><div class="phone">${esc(data.tel)}</div><a class="btn small" href="tel:${esc(String(data.tel).replace(/\s/g,""))}">📞 Abschlepper anrufen</a>`; }
+  else if(s==="erledigt"){ $("okTitle").textContent="Auftrag erledigt ✅"; $("okText").textContent=`Vielen Dank, dass Sie AbschleppRadar genutzt haben${data.firma?" – Ihr Abschlepper: "+data.firma:""}.`; stopStatusPoll(); }
+  else { $("okTitle").textContent="Anfrage storniert"; $("okText").textContent="Diese Anfrage wurde storniert."; stopStatusPoll(); }
+}
+async function cancelReq(){
+  const last=store.get("ar_last"); if(!last) return;
+  if($("cancelBtn").dataset.confirm!=="1"){ $("cancelBtn").dataset.confirm="1"; $("cancelBtn").textContent="Wirklich stornieren? Nochmal tippen"; setTimeout(()=>{ $("cancelBtn").dataset.confirm=""; $("cancelBtn").textContent="Anfrage stornieren"; },4000); return; }
+  $("cancelBtn").dataset.confirm=""; $("cancelBtn").textContent="Anfrage stornieren";
+  const { error } = await sb.rpc("cancel_request", { p_id:last.id, p_token:last.token });
+  if(error) return toast(errText(error));
+  toast("Anfrage storniert"); refreshStatus();
+}
+
+// ================= FAHRER: Anmeldung =================
+let authMode="login", user=null, driver=null;
+$("authSeg").onclick = e => { const b=e.target.closest("button"); if(!b) return; authMode=b.dataset.v; [...$("authSeg").children].forEach(x=>x.classList.toggle("on",x===b)); $("signupFields").style.display = authMode==="signup" ? "block" : "none"; $("aSubmit").textContent = authMode==="signup" ? "Registrieren" : "Anmelden"; $("aPw").autocomplete = authMode==="signup" ? "new-password" : "current-password"; msg("aMsg",""); };
+
+$("authForm").onsubmit = async e => {
+  e.preventDefault();
+  const mail=$("aMail").value.trim(), pw=$("aPw").value;
+  if(!mail || pw.length<8) return msg("aMsg","Bitte E-Mail und ein Passwort mit mindestens 8 Zeichen eingeben.");
+  $("aSubmit").disabled=true;
+  try{
+    if(authMode==="signup"){
+      const firma=$("aFirma").value.trim(), tel=$("aTel").value.trim();
+      if(firma.length<2 || tel.replace(/\D/g,"").length<6) throw new Error("Bitte Firmenname und Telefonnummer angeben.");
+      const { data, error } = await sb.auth.signUp({ email:mail, password:pw, options:{ data:{ firma, tel }, emailRedirectTo: location.origin+location.pathname } });
+      if(error) throw error;
+      if(!data.session){ msg("aMsg","Fast geschafft! Bitte bestätigen Sie Ihre E-Mail-Adresse über den Link in Ihrem Postfach und melden Sie sich dann an.", true); return; }
+    } else {
+      const { error } = await sb.auth.signInWithPassword({ email:mail, password:pw });
+      if(error) throw error;
+    }
+    msg("aMsg",""); await loadDriver();
+  }catch(err){ msg("aMsg", errText(err)); }
+  finally{ $("aSubmit").disabled=false; }
+};
+
+async function openDriver(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if(session){ user=session.user; await loadDriver(); } else go("login");
+}
+async function loadDriver(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if(!session) return go("login");
+  user=session.user;
+  const { data, error } = await sb.from("drivers").select("*").eq("id", user.id).maybeSingle();
+  if(error){ toast(errText(error)); return go("login"); }
+  if(!data){
+    const md=user.user_metadata||{};
+    if(md.firma && md.tel){
+      const { error:e2 } = await sb.from("drivers").insert({ id:user.id, firma:md.firma, tel:md.tel });
+      if(!e2) return loadDriver();
+    }
+    $("pFirma").value=md.firma||""; $("pTel").value=md.tel||""; return go("profil");
+  }
+  driver=data;
+  if(!driver.approved){ $("waitTxt").textContent=`Ihr Konto „${driver.firma}“ wird geprüft. Sobald es freigeschaltet ist, sehen Sie hier die Aufträge in Ihrer Nähe.`; return go("wait"); }
+  go("fahrer"); startDriver();
+}
+async function saveProfile(){
+  const firma=$("pFirma").value.trim(), tel=$("pTel").value.trim();
+  if(firma.length<2 || tel.replace(/\D/g,"").length<6) return msg("pMsg","Bitte Firmenname und Telefonnummer angeben.");
+  const { error } = await sb.from("drivers").insert({ id:user.id, firma, tel });
+  if(error) return msg("pMsg", errText(error));
+  loadDriver();
+}
+async function logout(){ stopDriver(); await sb.auth.signOut(); user=null; driver=null; toast("Abgemeldet"); go("start"); }
+
+// ================= FAHRER: Dashboard =================
+let map=null, meMarker=null, radCircle=null, reqLayer=null, requests=[], me=null, watchId=null, lastPush=0, channel=null, pollTimer=null;
+
+function initMap(){
+  if(map) return;
+  map = L.map("map", { zoomControl:true, attributionControl:true }).setView(KREFELD, 10);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom:18, attribution:"© OpenStreetMap" }).addTo(map);
+  reqLayer = L.layerGroup().addTo(map);
+}
+function startDriver(){
+  $("fHello").textContent = driver.firma;
+  $("rad").value = driver.radius_km; $("radVal").textContent = driver.radius_km+" km";
+  me = (driver.lat!=null && driver.lng!=null) ? [driver.lat, driver.lng] : null;
+  if(driver.status==="offline") setStatus("verfuegbar");
+  startGps(); loadRequests();
+  if(!channel){ channel = sb.channel("requests-live").on("postgres_changes", { event:"*", schema:"public", table:"requests" }, ()=>loadRequests()).subscribe(); }
+  clearInterval(pollTimer); pollTimer = setInterval(loadRequests, 20000);
+}
+function stopDriver(){
+  if(watchId!=null && navigator.geolocation) navigator.geolocation.clearWatch(watchId); watchId=null;
+  clearInterval(pollTimer); if(channel){ sb.removeChannel(channel); channel=null; }
+}
+function startGps(){
+  if(!navigator.geolocation){ $("fGpsTxt").textContent="GPS nicht verfügbar"; return; }
+  if(watchId!=null) return;
+  watchId = navigator.geolocation.watchPosition(p=>{
+    me=[p.coords.latitude, p.coords.longitude];
+    $("fGps").classList.add("ok"); $("fGpsTxt").textContent=`✅ Live-Standort aktiv (±${Math.round(p.coords.accuracy)} m)`;
+    renderDriver();
+    if(Date.now()-lastPush > 60000){ lastPush=Date.now(); sb.from("drivers").update({ lat:me[0], lng:me[1], updated_at:new Date().toISOString() }).eq("id", user.id).then(()=>{}); }
+  }, ()=>{
+    $("fGps").classList.remove("ok");
+    $("fGpsTxt").textContent = me ? "GPS gesperrt – letzter bekannter Standort wird verwendet. Bitte Standortfreigabe erlauben." : "GPS gesperrt – bitte Standortfreigabe im Browser erlauben. Bis dahin: Krefeld.";
+    renderDriver();
+  }, { enableHighAccuracy:true, maximumAge:30000, timeout:20000 });
+}
+async function setStatus(s){
+  driver.status=s; renderDriver();
+  const { error } = await sb.from("drivers").update({ status:s, updated_at:new Date().toISOString() }).eq("id", user.id);
+  if(error) toast(errText(error));
+}
+$("statusBtns").onclick = e => { const b=e.target.closest("button"); if(b) setStatus(b.dataset.s); };
+let radTimer=null;
+$("rad").oninput = e => { driver.radius_km=+e.target.value; $("radVal").textContent=driver.radius_km+" km"; renderDriver(true);
+  clearTimeout(radTimer); radTimer=setTimeout(()=>sb.from("drivers").update({ radius_km:driver.radius_km }).eq("id", user.id).then(()=>{}), 600); };
+
+async function loadRequests(){
+  if(!user) return;
+  const { data, error } = await sb.from("requests").select("id,nr,lat,lng,ort,strasse,marke,modell,kennzeichen,probleme,ziel,notiz,wann,termin,status,accepted_by,created_at").in("status",["neu","angenommen"]).order("created_at",{ ascending:false }).limit(300);
+  if(error) return toast(errText(error));
+  const before = new Set(requests.map(r=>r.id));
+  const fresh = data.filter(r=>r.status==="neu" && !before.has(r.id));
+  requests = data; renderDriver();
+  if(before.size && fresh.length && driver.status!=="offline"){ const pos=me||KREFELD; const near=fresh.filter(r=>dist(pos,[r.lat,r.lng])<=driver.radius_km); if(near.length){ toast(`🔔 Neuer Auftrag: ${P[near[0].probleme[0]].t} in ${near[0].ort||"der Nähe"}`); try{ navigator.vibrate && navigator.vibrate([200,100,200]); }catch(e){} } }
+}
+
+function renderDriver(fitOnly){
+  if(!driver || !map) return;
+  [...$("statusBtns").children].forEach(b=>b.classList.toggle("on", b.dataset.s===driver.status));
+  const pos = me || KREFELD, R = driver.radius_km;
+  const list = requests.map(r=>({ r, d:dist(pos,[r.lat,r.lng]) }));
+  const mine = list.filter(x=>x.r.status==="angenommen" && x.r.accepted_by===user.id);
+  const open = list.filter(x=>x.r.status==="neu");
+  const inR = open.filter(x=>x.d<=R).sort((a,b)=>a.d-b.d), outR = open.filter(x=>x.d>R);
+  $("kIn").textContent=inR.length; $("kOut").textContent=outR.length; $("kMine").textContent=mine.length;
+
+  // Karte
+  if(!meMarker){ meMarker=L.circleMarker(pos,{ radius:9, color:"#fff", weight:2, fillColor:"#4da3ff", fillOpacity:1 }).addTo(map).bindTooltip("Sie"); }
+  meMarker.setLatLng(pos);
+  if(!radCircle){ radCircle=L.circle(pos,{ radius:R*1000, color:"#ff9f1c", weight:1.5, fillOpacity:.06, dashArray:"5 6" }).addTo(map); }
+  radCircle.setLatLng(pos); radCircle.setRadius(R*1000);
+  reqLayer.clearLayers();
+  [...inR, ...mine].forEach(({r})=>{
+    const col = r.status==="angenommen" ? "#2ecc71" : r.wann==="termin" ? "#4da3ff" : "#ff9f1c";
+    L.circleMarker([r.lat,r.lng],{ radius:8, color:"#0f1720", weight:2, fillColor:col, fillOpacity:1 }).addTo(reqLayer).on("click",()=>openReq(r.id)).bindTooltip(P[r.probleme[0]].e+" "+esc(r.ort||""));
+  });
+  if(fitOnly || !renderDriver.fitted){ map.fitBounds(radCircle.getBounds(), { padding:[10,10] }); renderDriver.fitted=true; }
+
+  // Liste
+  let html="";
+  if(driver.status==="offline") html=`<div class="empty">Sie sind offline. Tippen Sie auf „Verfügbar“, um Aufträge zu sehen.</div>`;
+  else if(!inR.length) html=`<div class="empty">Keine offenen Aufträge im Umkreis von ${R} km.${outR.length? " "+outR.length+" weiter entfernt – Umkreis vergrößern.":""}</div>`;
+  else html=inR.map(reqHTML).join("");
+  if(mine.length) html = `<h3>Meine angenommenen Aufträge</h3>`+mine.map(reqHTML).join("") + `<h3>Offene Aufträge</h3>` + html;
+  $("reqList").innerHTML=html;
+}
+function reqHTML({r,d}){
+  const tag = r.status==="angenommen" ? `<span class="tag ok">Angenommen</span>` : r.wann==="termin" ? `<span class="tag plan">Termin</span>` : `<span class="tag new">Sofort</span>`;
+  return `<div class="req" onclick="openReq('${r.id}')"><div class="em">${P[r.probleme[0]].e}</div><div class="mid"><b>${esc(r.probleme.map(x=>P[x].t).join(" + "))}${tag}</b><small>${esc(r.ort)} · ${esc(r.marke)} ${esc(r.modell||"")}</small><small>${esc(whenTxt(r))} · ${ago(r.created_at)}</small></div><div class="km">${km(d)}<small>km</small></div></div>`;
+}
+function rows(r){
+  const out=[["Standort",r.strasse+", "+r.ort],["Fahrzeug",[r.marke,r.modell].filter(Boolean).join(" ")+(r.kennzeichen?" · "+r.kennzeichen:"")],["Problem",r.probleme.map(p=>P[p].e+" "+P[p].t).join(", ")]];
+  if(r.ziel) out.push(["Ziel",r.ziel]); out.push(["Wann",whenTxt(r)]); if(r.notiz) out.push(["Info",r.notiz]);
+  return out.map(x=>`<div><span>${esc(x[0])}</span><span>${esc(x[1])}</span></div>`).join("");
+}
+async function openReq(id){
+  const r=requests.find(x=>x.id===id); if(!r) return;
+  const d=dist(me||KREFELD,[r.lat,r.lng]);
+  const routeKunde=`https://www.google.com/maps/dir/?api=1&destination=${r.lat},${r.lng}`;
+  const routeZiel = r.ziel ? `https://www.google.com/maps/dir/?api=1&origin=${r.lat},${r.lng}&destination=${encodeURIComponent(r.ziel)}` : "";
+  const mine = r.status==="angenommen" && r.accepted_by===user.id;
+  let contact="";
+  if(mine){
+    const { data } = await sb.from("request_contacts").select("name,tel,mail").eq("request_id", r.id).maybeSingle();
+    if(data) contact=`<div class="card" style="margin-top:14px"><div style="color:var(--muted);font-size:13px">Kunde: ${esc(data.name)}</div><div class="phone">${esc(data.tel)}</div>${data.mail?`<div class="hint">${esc(data.mail)}</div>`:""}<a class="btn small" href="tel:${esc(data.tel.replace(/\s/g,""))}">📞 Kunde anrufen</a></div>`;
+  }
+  $("sheetIn").innerHTML = `<h2>${P[r.probleme[0]].e} ${esc(r.probleme.map(x=>P[x].t).join(" + "))} <span style="color:var(--muted);font-size:14px;font-weight:500">Nr. ${r.nr}</span></h2>
+  <div class="card summary">${rows(r)}<div><span>Entfernung</span><span>${km(d)} km (Luftlinie)</span></div><div><span>Eingegangen</span><span>${ago(r.created_at)}</span></div></div>
+  ${mine ? `${contact}
+     <a class="btn blue" href="${routeKunde}" target="_blank" rel="noopener">🧭 Route zum Kunden</a>
+     ${routeZiel?`<a class="btn ghost" href="${routeZiel}" target="_blank" rel="noopener">🏁 Route Kunde → Ziel</a>`:""}
+     <button class="btn ghost small" onclick="finishReq('${r.id}')">✓ Auftrag erledigt</button>
+     <button class="btn red small" onclick="releaseReq('${r.id}')">Auftrag zurückgeben</button>`
+   : `<div class="hint" style="margin-top:12px">Name und Telefonnummer des Kunden werden nach der Annahme freigeschaltet.</div>
+     <button class="btn" id="accBtn" onclick="acceptReq('${r.id}')" ${driver.status==="offline"?"disabled":""}>Auftrag annehmen</button>
+     <button class="btn ghost small" onclick="closeSheet()">Schließen</button>`}`;
+  $("sheet").classList.add("open");
+}
+function closeSheet(){ $("sheet").classList.remove("open"); }
+async function acceptReq(id){
+  $("accBtn").disabled=true;
+  const { data, error } = await sb.rpc("accept_request", { p_id:id });
+  if(error){ $("accBtn").disabled=false; return toast(errText(error)); }
+  if(!data){ closeSheet(); toast("Zu spät – ein anderer Abschlepper hat den Auftrag bereits angenommen."); return loadRequests(); }
+  driver.status="im_einsatz"; toast("Auftrag angenommen – bitte Kunden anrufen"); await loadRequests(); openReq(id);
+}
+async function finishReq(id){
+  const { error } = await sb.rpc("finish_request", { p_id:id }); if(error) return toast(errText(error));
+  closeSheet(); toast("Auftrag abgeschlossen ✅"); await loadDriverStatus(); loadRequests();
+}
+async function releaseReq(id){
+  const { error } = await sb.rpc("release_request", { p_id:id }); if(error) return toast(errText(error));
+  closeSheet(); toast("Auftrag zurückgegeben"); loadRequests();
+}
+async function loadDriverStatus(){ const { data } = await sb.from("drivers").select("status").eq("id", user.id).maybeSingle(); if(data){ driver.status=data.status; renderDriver(); } }
+
+// ================= Start =================
+if(store.get("ar_last")) $("lastReqBtn").style.display="block";
+sb.auth.onAuthStateChange((evt)=>{ if(evt==="SIGNED_OUT"){ stopDriver(); } });
+</script>
+</body>
+</html>
