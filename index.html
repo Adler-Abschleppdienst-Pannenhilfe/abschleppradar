@@ -480,6 +480,7 @@ footer a{color:var(--muted)}
 
   <h4>8. Karten und Adresssuche (OpenStreetMap)</h4>
   <p>Für die Kartenanzeige und die Umwandlung von Adressen in Koordinaten (und umgekehrt) nutzen wir Dienste der OpenStreetMap Foundation (St John’s Innovation Centre, Cowley Road, Cambridge, CB4 0WS, Vereinigtes Königreich). Dabei werden Ihre IP-Adresse sowie die angefragten Kartenausschnitte bzw. Adressen an die OpenStreetMap Foundation übermittelt. Für das Vereinigte Königreich besteht ein Angemessenheitsbeschluss der EU-Kommission. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an einer funktionierenden Kartendarstellung und Adresssuche).</p>
+  <p>Beim Abschleppen berechnen wir die Fahrstrecke vom Abholort zum Ziel mit dem Routing-Dienst der FOSSGIS e. V. (routing.openstreetmap.de, Deutschland). Dabei werden Start- und Zielkoordinaten sowie Ihre IP-Adresse übermittelt. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO (Vorbereitung des Auftrags).</p>
 
   <h4>9. Programmbibliotheken (CDN)</h4>
   <p>Zur Darstellung der Karte und zur Verbindung mit der Datenbank laden wir Programmbibliotheken von den Diensten unpkg.com und cdn.jsdelivr.net. Dabei wird Ihre IP-Adresse an den jeweiligen Anbieter übermittelt. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an einer zuverlässigen technischen Bereitstellung).</p>
@@ -535,6 +536,15 @@ async function reverseGeo(lat,lng){
   try{ const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=de`); const j=await r.json(); const a=j.address||{};
     return { str:[a.road||a.pedestrian||a.motorway||"", a.house_number||""].join(" ").trim(), ort:[a.postcode||"", a.city||a.town||a.village||a.suburb||a.county||""].join(" ").trim() };
   }catch(e){ return null; }
+}
+async function routeKm(a,b){
+  try{
+    const ctl=new AbortController(); const t=setTimeout(()=>ctl.abort(),7000);
+    const r=await fetch(`https://routing.openstreetmap.de/routed-car/route/v1/driving/${a[1]},${a[0]};${b[1]},${b[0]}?overview=false`,{signal:ctl.signal});
+    clearTimeout(t); const j=await r.json();
+    if(j && j.routes && j.routes[0]) return Math.round(j.routes[0].distance/100)/10;
+  }catch(e){}
+  return Math.round(dist(a,b)*1.3*10)/10; // Schätzung, falls der Routing-Dienst nicht antwortet
 }
 async function geocode(q){
   try{ const r=await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=de,nl,be&accept-language=de&q=${encodeURIComponent(q)}`); const j=await r.json(); if(j&&j[0]) return [parseFloat(j[0].lat), parseFloat(j[0].lon)]; }catch(e){}
@@ -611,10 +621,16 @@ $("kForm").onsubmit = async e => {
       [lat,lng]=c;
     }
     const termin = when==="termin" ? new Date(`${v("kDatum")}T${v("kZeit")}`).toISOString() : null;
+    let zielKm = null;
+    if(selProb.has("abschleppen") && v("kZiel")){
+      $("kSubmit").textContent="Strecke wird berechnet …";
+      const z = await geocode(v("kZiel")) || await geocode(v("kZiel")+", "+v("kOrt"));
+      if(z) zielKm = await routeKm([lat,lng], z);
+    }
     const { data, error } = await sb.rpc("create_request", {
       p_lat:lat, p_lng:lng, p_ort:v("kOrt"), p_strasse:v("kStr"), p_marke:v("kMarke"), p_modell:v("kModell"), p_kennzeichen:v("kKz"),
       p_probleme:[...selProb], p_ziel:v("kZiel"), p_notiz:v("kNote"), p_wann:when, p_termin:termin,
-      p_name:v("kName"), p_tel:v("kTel"), p_mail:v("kMail"), p_firma:prefFirma });
+      p_name:v("kName"), p_tel:v("kTel"), p_mail:v("kMail"), p_firma:prefFirma, p_ziel_km:zielKm });
     if(error) throw error;
     store.set("ar_last", { id:data.id, nr:data.nr, token:data.token, t:Date.now() });
     $("kForm").reset(); selProb.clear(); gps=null; document.querySelectorAll("#probChips .chip").forEach(c=>c.classList.remove("on"));
@@ -853,7 +869,7 @@ $("rad").oninput = e => { driver.radius_km=+e.target.value; $("radVal").textCont
 
 async function loadRequests(){
   if(!user) return;
-  const { data, error } = await sb.from("requests").select("id,nr,lat,lng,ort,strasse,marke,modell,kennzeichen,probleme,ziel,notiz,wann,termin,status,accepted_by,created_at,preis,preis_bis,eta_min,accepted_at,bevorzugt_driver,exklusiv_bis,kategorie").in("status",["neu","angenommen"]).order("created_at",{ ascending:false }).limit(300);
+  const { data, error } = await sb.from("requests").select("id,nr,lat,lng,ort,strasse,marke,modell,kennzeichen,probleme,ziel,notiz,wann,termin,status,accepted_by,created_at,preis,preis_bis,eta_min,accepted_at,bevorzugt_driver,exklusiv_bis,kategorie,ziel_km").in("status",["neu","angenommen"]).order("created_at",{ ascending:false }).limit(300);
   if(error) return toast(errText(error));
   const { data:ao } = await sb.from("angebote").select("request_id,preis,preis_bis,notiz,termin_vorschlag").eq("driver_id", user.id);
   myOffers = Object.fromEntries((ao||[]).map(o=>[o.request_id,o]));
@@ -900,12 +916,12 @@ function reqHTML({r,d}){
   if(r.status==="neu" && myOffers[r.id]) tag += `<span class="tag ok">Ihr ${isWS(r)?"Preis":"Angebot"}: ${priceRange(myOffers[r.id].preis,myOffers[r.id].preis_bis)}</span>`;
   if(isExclusiveForMe(r)) tag += `<span class="tag new">⭐ Direkt an Sie</span>`;
   if(isWS(r)) return `<div class="req" onclick="openReq('${r.id}')"><div class="em">🔧</div><div class="mid"><b>Werkstatt-Anfrage${tag}</b><small>${esc(r.marke)} ${esc(r.modell||"")} · ${esc(r.ort)}</small><small>${esc((r.notiz||"").slice(0,70))}${(r.notiz||"").length>70?"…":""}</small><small>${esc(whenTxt(r))} · ${ago(r.created_at)}</small></div><div class="km">${km(d)}<small>km</small></div></div>`;
-  return `<div class="req" onclick="openReq('${r.id}')"><div class="em">${P[r.probleme[0]].e}</div><div class="mid"><b>${esc(r.probleme.map(x=>P[x].t).join(" + "))}${tag}</b><small>${esc(r.ort)} · ${esc(r.marke)} ${esc(r.modell||"")}</small><small>${esc(whenTxt(r))} · ${ago(r.created_at)}</small></div><div class="km">${km(d)}<small>km</small></div></div>`;
+  return `<div class="req" onclick="openReq('${r.id}')"><div class="em">${P[r.probleme[0]].e}</div><div class="mid"><b>${esc(r.probleme.map(x=>P[x].t).join(" + "))}${tag}</b><small>${esc(r.ort)} · ${esc(r.marke)} ${esc(r.modell||"")}${r.ziel_km!=null?` · 🏁 ${Math.round(r.ziel_km)} km bis Ziel`:""}</small><small>${esc(whenTxt(r))} · ${ago(r.created_at)}</small></div><div class="km">${km(d)}<small>km</small></div></div>`;
 }
 function rows(r){
   if(isWS(r)) return [["Ort",r.ort],["Fahrzeug",[r.marke,r.modell].filter(Boolean).join(" ")],["Problem",r.notiz||""],["Termin",whenTxt(r)]].map(x=>`<div><span>${esc(x[0])}</span><span style="white-space:pre-wrap">${esc(x[1])}</span></div>`).join("");
   const out=[["Standort",r.strasse+", "+r.ort],["Fahrzeug",[r.marke,r.modell].filter(Boolean).join(" ")+(r.kennzeichen?" · "+r.kennzeichen:"")],["Problem",r.probleme.map(p=>P[p].e+" "+P[p].t).join(", ")]];
-  if(r.ziel) out.push(["Ziel",r.ziel]); out.push(["Wann",whenTxt(r)]); if(r.notiz) out.push(["Info",r.notiz]);
+  if(r.ziel) out.push(["Ziel", r.ziel + (r.ziel_km!=null ? ` (ca. ${Math.round(r.ziel_km)} km Fahrstrecke)` : "")]); out.push(["Wann",whenTxt(r)]); if(r.notiz) out.push(["Info",r.notiz]);
   return out.map(x=>`<div><span>${esc(x[0])}</span><span>${esc(x[1])}</span></div>`).join("");
 }
 async function openReq(id){
