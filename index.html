@@ -219,6 +219,7 @@ footer a{color:var(--muted)}
 <!-- FAHRER: LOGIN / REGISTRIERUNG -->
 <section class="view" id="v-login">
   <h2>Für Abschlepper</h2>
+  <div class="info" id="inviteBanner" style="display:none;margin-bottom:12px"></div>
   <div class="seg" id="authSeg"><button type="button" data-v="login" class="on">Anmelden</button><button type="button" data-v="signup">Registrieren</button></div>
   <form id="authForm" novalidate>
     <div id="signupFields" style="display:none">
@@ -230,10 +231,12 @@ footer a{color:var(--muted)}
       <label class="check"><input type="checkbox" id="aDs"> <span>Ich bin einverstanden, dass mein Firmenname und meine Telefonnummer nach Annahme eines Auftrags an den jeweiligen Kunden weitergegeben werden. Details in der <a href="#datenschutz">Datenschutzerklärung</a>.</span></label>
       <label class="check"><input type="checkbox" id="aVers"> <span>Ich versichere, dass mein Unternehmen ein angemeldetes Gewerbe ist und über alle erforderlichen Genehmigungen, geeignete Fahrzeuge und ausreichende Versicherungen (insbesondere Betriebshaftpflicht sowie – bei Abschleppdiensten – Fahrzeug- und Ladungshaftpflicht) verfügt. Mir ist bekannt, dass AbschleppRadar nur vermittelt: Verträge schließe ich direkt mit den Kunden, und für die Durchführung, Preise und Schäden bin ich selbst verantwortlich.</span></label>
     </div>
-    <label for="aMail">E-Mail</label><input id="aMail" type="email" autocomplete="email">
+    <label for="aMail">E-Mail oder Handynummer</label><input id="aMail" type="text" autocomplete="username" placeholder="name@firma.de oder 0170 1234567">
     <label for="aPw">Passwort</label><input id="aPw" type="password" autocomplete="current-password" placeholder="mind. 8 Zeichen">
     <div class="msg" id="aMsg"></div>
     <button class="btn blue" type="submit" id="aSubmit">Anmelden</button>
+    <button type="button" class="linkbtn" id="pwForgotBtn" style="display:block;margin:10px auto 0" onclick="pwForgot()">Passwort vergessen?</button>
+    <div class="card" id="pwHelp" style="display:none;margin-top:10px;font-size:14px;line-height:1.5"></div>
   </form>
   <p class="hint" style="margin-top:16px">Neue Abschlepper und Werkstätten werden nach der Registrierung geprüft und freigeschaltet. Erst danach sind Aufträge sichtbar.</p>
 </section>
@@ -315,7 +318,23 @@ footer a{color:var(--muted)}
     <div id="pkList"></div>
   </div>
 
-  <div id="adm-drivers" style="margin-top:14px"></div>
+  <div id="adm-drivers" style="margin-top:14px">
+    <div class="card">
+      <b>➕ Firma einladen</b>
+      <p class="hint" style="margin:6px 0 4px">Sie tragen die Firma ein und schicken ihr den Link per WhatsApp. Die Firma legt nur noch E-Mail und Passwort fest und ist <b>sofort freigeschaltet</b>.</p>
+      <div class="seg" id="ivTyp"><button type="button" data-v="abschlepper" class="on">🚛 Abschleppdienst</button><button type="button" data-v="werkstatt">🔧 Werkstatt</button></div>
+      <label for="ivFirma">Firmenname</label><input id="ivFirma" placeholder="z. B. Schnell Abschlepp GmbH">
+      <label for="ivTel">Handynummer (für WhatsApp)</label><input id="ivTel" type="tel" placeholder="0170 …">
+      <label for="ivMail">E-Mail <span style="opacity:.6">(optional)</span></label><input id="ivMail" type="email">
+      <div class="msg" id="ivMsg"></div>
+      <button type="button" class="btn" id="ivBtn" onclick="ivCreate()">Einladung erstellen</button>
+      <div id="ivResult"></div>
+    </div>
+    <h3>Offene Einladungen</h3>
+    <div id="ivList"></div>
+    <h3>Registrierte Firmen</h3>
+    <div id="admDrvList"></div>
+  </div>
 
   <div id="adm-abr" style="display:none;margin-top:14px">
     <div class="row">
@@ -372,6 +391,16 @@ footer a{color:var(--muted)}
     <div class="msg" id="wsMsg"></div>
     <button class="btn" type="submit" id="wsSubmit">Preisschätzungen anfordern</button>
   </form>
+</section>
+
+<!-- NEUES PASSWORT -->
+<section class="view" id="v-newpw">
+  <h2>🔑 Neues Passwort festlegen</h2>
+  <p class="lead">Mindestens 8 Zeichen. Danach können Sie sich mit dem neuen Passwort anmelden.</p>
+  <label for="np1">Neues Passwort</label><input id="np1" type="password" autocomplete="new-password">
+  <label for="np2">Passwort wiederholen</label><input id="np2" type="password" autocomplete="new-password">
+  <div class="msg" id="npMsg"></div>
+  <button class="btn blue" id="npBtn" onclick="pwSave()">Passwort speichern</button>
 </section>
 
 <!-- KONTAKT -->
@@ -499,7 +528,7 @@ const isWS = r => r.kategorie==="werkstatt";
 function priceRange(p,pb){ return pb!=null && Number(pb)!==Number(p) ? `${euro(p)} – ${euro(pb)}` : euro(p); }
 function whenTxt(r){ if(r.wann==="sofort") return "Sofort"; if(!r.termin) return isWS(r) ? "Kein Wunschtermin" : "Termin offen"; if(isWS(r)) return "Wunschtermin "+new Date(r.termin).toLocaleDateString("de-DE",{weekday:"short",day:"2-digit",month:"2-digit"}); return "Termin "+new Date(r.termin).toLocaleString("de-DE",{weekday:"short",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}); }
 function km(d){ return d.toFixed(1).replace(".",","); }
-function errText(e){ const m=(e&&e.message)||String(e); if(/Failed to fetch|NetworkError/i.test(m)) return "Keine Verbindung – bitte Internet prüfen."; if(/Invalid login/i.test(m)) return "E-Mail oder Passwort falsch."; if(/already registered/i.test(m)) return "Diese E-Mail ist bereits registriert – bitte anmelden."; if(/Email not confirmed/i.test(m)) return "Bitte bestätigen Sie zuerst Ihre E-Mail-Adresse (Link im Postfach)."; if(/Password should be/i.test(m)) return "Das Passwort muss mindestens 8 Zeichen haben."; return m; }
+function errText(e){ const m=(e&&e.message)||String(e); if(/Failed to fetch|NetworkError/i.test(m)) return "Keine Verbindung – bitte Internet prüfen."; if(/Invalid login/i.test(m)) return "Zugangsdaten falsch – bitte E-Mail/Handynummer und Passwort prüfen."; if(/Invalid login/i.test(m)) return "E-Mail oder Passwort falsch."; if(/already registered/i.test(m)) return "Diese E-Mail ist bereits registriert – bitte anmelden."; if(/Email not confirmed/i.test(m)) return "Bitte bestätigen Sie zuerst Ihre E-Mail-Adresse (Link im Postfach)."; if(/Password should be/i.test(m)) return "Das Passwort muss mindestens 8 Zeichen haben."; return m; }
 
 function getPos(opts){ return new Promise((res,rej)=>{ if(!navigator.geolocation) return rej(new Error("GPS nicht verfügbar")); navigator.geolocation.getCurrentPosition(p=>res(p), e=>rej(e), opts||{enableHighAccuracy:true,timeout:12000,maximumAge:30000}); }); }
 async function reverseGeo(lat,lng){
@@ -664,8 +693,9 @@ $("authSeg").onclick = e => { const b=e.target.closest("button"); if(!b) return;
 
 $("authForm").onsubmit = async e => {
   e.preventDefault();
-  const mail=$("aMail").value.trim(), pw=$("aPw").value;
-  if(!mail || pw.length<8) return msg("aMsg","Bitte E-Mail und ein Passwort mit mindestens 8 Zeichen eingeben.");
+  const ident=$("aMail").value.trim(), pw=$("aPw").value;
+  const mail=authEmail(ident);
+  if(!mail || pw.length<8) return msg("aMsg","Bitte E-Mail oder Handynummer und ein Passwort mit mindestens 8 Zeichen eingeben.");
   $("aSubmit").disabled=true;
   try{
     if(authMode==="signup"){
@@ -673,8 +703,9 @@ $("authForm").onsubmit = async e => {
       if(firma.length<2 || tel.replace(/\D/g,"").length<6) throw new Error("Bitte Firmenname und Telefonnummer angeben.");
       if(!$("aDs").checked) throw new Error("Bitte bestätigen Sie die Weitergabe Ihrer Kontaktdaten an Kunden.");
       if(!$("aVers").checked) throw new Error("Bitte bestätigen Sie Gewerbe, Genehmigungen und Versicherungen Ihres Unternehmens.");
-      const { data, error } = await sb.auth.signUp({ email:mail, password:pw, options:{ data:{ firma, tel, typ:regTyp() }, emailRedirectTo: location.origin+location.pathname } });
+      const { data, error } = await sb.auth.signUp({ email:mail, password:pw, options:{ data:{ firma, tel, typ:regTyp(), invite: pendingInvite || undefined }, emailRedirectTo: location.origin+location.pathname } });
       if(error) throw error;
+      if(data.session && pendingInvite){ /* wird in loadDriver eingelöst */ }
       if(!data.session){ msg("aMsg","Fast geschafft! Bitte bestätigen Sie Ihre E-Mail-Adresse über den Link in Ihrem Postfach und melden Sie sich dann an.", true); return; }
     } else {
       const { error } = await sb.auth.signInWithPassword({ email:mail, password:pw });
@@ -695,6 +726,12 @@ async function loadDriver(){
   user=session.user;
   const { data, error } = await sb.from("drivers").select("*").eq("id", user.id).maybeSingle();
   if(error){ toast(errText(error)); return go("login"); }
+  const inv = (user.user_metadata||{}).invite || pendingInvite || store.get("ar_invite");
+  if(inv && (!data || !data.approved)){
+    const { data:f } = await sb.rpc("redeem_invite", { p_code: inv });
+    pendingInvite=null; store.del("ar_invite"); $("inviteBanner").style.display="none";
+    if(f){ toast("✅ Willkommen bei AbschleppRadar – Ihr Konto ist freigeschaltet"); return loadDriver(); }
+  }
   if(!data){
     const md=user.user_metadata||{};
     if(md.firma && md.tel){
@@ -1022,21 +1059,32 @@ function adminTab(t){
   if(t==="drivers") loadAdmDrivers(); else if(t==="abr") loadAbr(); else if(t==="partner") loadAdmPartners(); else loadLog();
 }
 async function loadAdmDrivers(){
-  $("adm-drivers").innerHTML=`<div class="empty">Lädt …</div>`;
+  loadInvites();
+  $("admDrvList").innerHTML=`<div class="empty">Lädt …</div>`;
   let { data, error } = await sb.rpc("admin_drivers");
-  if(error) return $("adm-drivers").innerHTML=`<div class="msg err">${esc(errText(error))}</div>`;
+  if(error) return $("admDrvList").innerHTML=`<div class="msg err">${esc(errText(error))}</div>`;
   data = data || [];
   const pending=data.filter(d=>!d.approved).length;
-  $("adm-drivers").innerHTML = (pending?`<div class="info"><span>🔔</span><span><b>${pending}</b> neue Registrierung(en) warten auf Freischaltung.</span></div>`:"") +
+  $("admDrvList").innerHTML = (pending?`<div class="info"><span>🔔</span><span><b>${pending}</b> neue Registrierung(en) warten auf Freischaltung.</span></div>`:"") +
     (data.length? data.map(d=>`<div class="card" style="margin-top:10px">
       <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
         <div><b>${d.typ==="werkstatt"?"🔧":"🚛"} ${esc(d.firma)}</b> ${d.approved?`<span class="tag ok">Freigeschaltet</span>`:`<span class="tag new">Wartet</span>`}
-          <div class="hint">📞 ${esc(d.tel)}<br>✉️ ${esc(d.email||"–")}<br>Registriert ${new Date(d.created_at).toLocaleDateString("de-DE")} · ${d.auftraege} Aufträge</div></div>
+          <div class="hint">📞 ${esc(d.tel)}<br>${esc(loginLabel(d.email))}<br>Registriert ${new Date(d.created_at).toLocaleDateString("de-DE")} · ${d.auftraege} Aufträge</div></div>
       </div>
       ${d.id===user.id ? "" : d.approved
         ? `<button class="btn red small" onclick="setApproved('${d.id}',false,this)">Sperren</button>`
         : `<button class="btn small" onclick="setApproved('${d.id}',true,this)">✓ Freischalten</button>`}
+      ${d.id===user.id ? "" : `<button class="linkbtn" style="margin-top:8px" onclick="pwLinkFor('${d.id}','${esc(d.firma).replace(/'/g,"")}','${esc(d.tel).replace(/'/g,"")}',this)">🔑 Passwort-Link senden</button><div id="pwl-${d.id}"></div>`}
     </div>`).join("") : `<div class="empty">Noch keine Abschlepper registriert.</div>`);
+}
+async function pwLinkFor(id, firma, tel, btn){
+  btn.disabled=true;
+  const { data, error } = await sb.rpc("admin_pw_link", { p_user:id });
+  btn.disabled=false;
+  if(error) return toast(errText(error));
+  const link = APP_BASE + "#passwort-" + data;
+  const text = `Hallo ${firma}, hier ist Ihr Link, um ein neues Passwort für AbschleppRadar festzulegen (1 Stunde gültig): ${link}`;
+  $("pwl-"+id).innerHTML = `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><a class="tgbtn" style="background:#25D366" href="https://wa.me/${waNumber(tel)}?text=${encodeURIComponent(text)}" target="_blank" rel="noopener">💬 Per WhatsApp senden</a><a class="hbtn" style="display:inline-block;margin:0;text-decoration:none" href="sms:+${waNumber(tel)}?body=${encodeURIComponent(text)}">✉️ SMS</a></div><div class="hint">Link ist 1 Stunde gültig.</div>`;
 }
 async function setApproved(id, ok, btn){
   if(!ok && btn.dataset.confirm!=="1"){ btn.dataset.confirm="1"; btn.textContent="Wirklich sperren? Nochmal tippen"; return; }
@@ -1123,6 +1171,125 @@ $("wsForm").onsubmit = async e => {
   }catch(err){ msg("wsMsg", errText(err)); }
   finally{ $("wsSubmit").disabled=false; $("wsSubmit").textContent="Preisschätzungen anfordern"; }
 };
+
+// ---------- Anmeldung per E-Mail oder Handynummer ----------
+const PHONE_DOMAIN = "tel.abschleppradar.de";
+function phoneDigits(t){ let d=String(t||"").replace(/[^\d+]/g,""); if(d.startsWith("+")) d=d.slice(1); else if(d.startsWith("00")) d=d.slice(2); else if(d.startsWith("0")) d="49"+d.slice(1); return d; }
+function authEmail(ident){
+  ident=(ident||"").trim(); if(!ident) return null;
+  if(ident.includes("@")) return ident.toLowerCase();
+  const d=phoneDigits(ident); return d.length>=8 ? `p${d}@${PHONE_DOMAIN}` : null;
+}
+function loginLabel(email){ if(!email) return "–"; if(email.endsWith("@"+PHONE_DOMAIN)){ const d=email.slice(1,email.indexOf("@")); return "📱 Login per Handy: +"+d; } return "✉️ "+email; }
+
+// ---------- Passwort vergessen / neues Passwort ----------
+let pwMode=null;
+function pwForgot(){
+  const ident=$("aMail").value.trim(), isMail=ident.includes("@");
+  $("pwHelp").style.display="block";
+  $("pwHelp").innerHTML = `
+    <b>Passwort vergessen?</b>
+    <p style="margin:6px 0">📱 <b>Mit Handynummer angemeldet:</b> Schreiben Sie unserem Telegram-Bot <a href="https://t.me/${TG_BOT}" target="_blank" rel="noopener">@${TG_BOT}</a> die Nachricht <b>/passwort</b> – Sie bekommen sofort einen Link. Ohne Telegram: rufen Sie uns an, wir schicken Ihnen den Link per WhatsApp (<a href="#kontakt">Kontakt</a>).</p>
+    <p style="margin:6px 0">✉️ <b>Mit E-Mail angemeldet:</b> ${isMail?"":"E-Mail oben eintragen und "}hier tippen:</p>
+    <button type="button" class="btn ghost small" onclick="pwMail()">Link per E-Mail senden</button>`;
+}
+async function pwMail(){
+  const ident=$("aMail").value.trim();
+  if(!ident.includes("@")) return toast("Bitte oben Ihre E-Mail-Adresse eintragen");
+  const { error } = await sb.auth.resetPasswordForEmail(ident, { redirectTo: location.origin+location.pathname });
+  if(error) return toast(errText(error));
+  toast("📧 E-Mail gesendet – bitte Postfach prüfen (auch Spam)");
+}
+async function pwSave(){
+  const a=$("np1").value, b=$("np2").value;
+  if(a.length<8) return msg("npMsg","Das Passwort muss mindestens 8 Zeichen haben.");
+  if(a!==b) return msg("npMsg","Die Passwörter stimmen nicht überein.");
+  $("npBtn").disabled=true;
+  try{
+    if(pwMode && pwMode.type==="code"){
+      const { data, error } = await sb.rpc("reset_password_with_code", { p_code:pwMode.code, p_password:a });
+      if(error) throw error;
+      pwMode=null; $("np1").value=""; $("np2").value="";
+      go("login"); $("authSeg").querySelector('[data-v=login]').click();
+      if(data){ $("aMail").value = data.endsWith("@"+PHONE_DOMAIN) ? "+"+data.slice(1,data.indexOf("@")) : data; }
+      msg("aMsg","✅ Neues Passwort gespeichert – bitte jetzt anmelden.", true);
+    } else {
+      const { error } = await sb.auth.updateUser({ password:a });
+      if(error) throw error;
+      pwMode=null; toast("✅ Neues Passwort gespeichert"); loadDriver();
+    }
+  }catch(e){ msg("npMsg", errText(e)); }
+  finally{ $("npBtn").disabled=false; }
+}
+function openPwReset(code){
+  if(!/^[0-9a-f-]{36}$/i.test(code)){ toast("Ungültiger Link"); return go("login"); }
+  pwMode={ type:"code", code }; msg("npMsg",""); go("newpw");
+}
+
+// ---------- Einladungen ----------
+let pendingInvite = null;
+document.getElementById("ivTyp").addEventListener("click", e=>{ const b=e.target.closest("button"); if(!b) return; [...$("ivTyp").children].forEach(x=>x.classList.toggle("on",x===b)); });
+function waNumber(tel){ let d=String(tel||"").replace(/[^\d+]/g,""); if(d.startsWith("+")) d=d.slice(1); else if(d.startsWith("00")) d=d.slice(2); else if(d.startsWith("0")) d="49"+d.slice(1); return d; }
+function inviteLink(code){ return APP_BASE + "#einladung-" + code; }
+function inviteText(firma, typ, link){
+  return `Hallo ${firma}, ich lade Sie zu AbschleppRadar ein – ${typ==="werkstatt"?"Kundenanfragen für Reparaturen":"Abschlepp- und Pannenaufträge"} aus Ihrer Nähe, im ersten Jahr kostenlos. Bitte über diesen Link nur noch E-Mail und Passwort festlegen, Ihr Konto ist sofort freigeschaltet: ${link}\n\nViele Grüße\nMurat Yildirim – Auto Transport Adler`;
+}
+function inviteButtons(i){
+  const link=inviteLink(i.code), text=inviteText(i.firma,i.typ,link), wa=waNumber(i.tel);
+  return `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+    <a class="tgbtn" style="background:#25D366" href="https://wa.me/${wa}?text=${encodeURIComponent(text)}" target="_blank" rel="noopener">💬 Per WhatsApp senden</a>
+    <a class="hbtn" style="display:inline-block;margin:0;text-decoration:none" href="sms:+${wa}?body=${encodeURIComponent(text)}">✉️ SMS</a>
+    <button class="hbtn" style="display:block;margin:0" onclick="ivCopy('${i.code}',this)">📋 Link kopieren</button>
+  </div>`;
+}
+async function ivCreate(){
+  const firma=$("ivFirma").value.trim(), tel=$("ivTel").value.trim(), mail=$("ivMail").value.trim();
+  const typ=$("ivTyp").querySelector("button.on").dataset.v;
+  if(firma.length<2) return msg("ivMsg","Bitte Firmennamen eingeben.");
+  if(tel.replace(/\D/g,"").length<6) return msg("ivMsg","Bitte Handynummer eingeben.");
+  $("ivBtn").disabled=true;
+  const { data, error } = await sb.rpc("admin_invite_create", { p_typ:typ, p_firma:firma, p_tel:tel, p_email:mail });
+  $("ivBtn").disabled=false;
+  if(error) return msg("ivMsg", errText(error));
+  msg("ivMsg","");
+  $("ivResult").innerHTML = `<div class="msg ok" style="display:block">✅ Einladung für <b>${esc(firma)}</b> erstellt – jetzt senden:</div>` + inviteButtons({ code:data, firma, tel, typ });
+  $("ivFirma").value=""; $("ivTel").value=""; $("ivMail").value="";
+  loadInvites();
+}
+async function ivCopy(code, btn){
+  try{ await navigator.clipboard.writeText(inviteLink(code)); btn.textContent="✅ Kopiert"; setTimeout(()=>btn.textContent="📋 Link kopieren",2000); }
+  catch(e){ toast(inviteLink(code)); }
+}
+let ivAll=[];
+async function loadInvites(){
+  const { data, error } = await sb.rpc("admin_invites");
+  if(error){ $("ivList").innerHTML=`<div class="msg err">${esc(errText(error))}</div>`; return; }
+  ivAll = data||[];
+  const open = ivAll.filter(i=>!i.eingeloest_at);
+  $("ivList").innerHTML = open.length ? open.map(i=>`<div class="card" style="margin-bottom:10px">
+      <div><b>${i.typ==="werkstatt"?"🔧":"🚛"} ${esc(i.firma)}</b> <span class="tag plan">noch nicht angemeldet</span></div>
+      <div class="hint">📞 ${esc(i.tel)}${i.email?" · ✉️ "+esc(i.email):""} · erstellt ${new Date(i.created_at).toLocaleDateString("de-DE")}</div>
+      ${inviteButtons(i)}
+      <button class="linkbtn" style="margin-top:6px;color:var(--red)" onclick="ivDelete('${i.code}',this)">Einladung löschen</button>
+    </div>`).join("") : `<div class="empty">Keine offenen Einladungen.</div>`;
+}
+async function ivDelete(code, btn){
+  if(btn.dataset.confirm!=="1"){ btn.dataset.confirm="1"; btn.textContent="Wirklich löschen?"; return; }
+  const { error } = await sb.rpc("admin_invite_delete", { p_code:code }); if(error) return toast(errText(error));
+  toast("Einladung gelöscht"); loadInvites();
+}
+async function openInvite(code){
+  if(!/^[0-9a-f-]{36}$/i.test(code)){ toast("Ungültiger Einladungslink"); return go("login"); }
+  const { data } = await sb.rpc("invite_info", { p_code:code });
+  go("login");
+  if(!data){ toast("Diese Einladung ist ungültig oder wurde bereits verwendet."); return; }
+  pendingInvite = code; store.set("ar_invite", code);
+  $("authSeg").querySelector('[data-v=signup]').click();
+  $("aTyp").querySelector(`[data-v=${data.typ==="werkstatt"?"werkstatt":"abschlepper"}]`).click();
+  $("aFirma").value=data.firma||""; $("aTel").value=data.tel||""; if(data.email) $("aMail").value=data.email;
+  $("inviteBanner").innerHTML=`<span>🎉</span><span>Sie wurden zu AbschleppRadar eingeladen, <b>${esc(data.firma)}</b>. Legen Sie nur noch E-Mail und Passwort fest – Ihr Konto wird <b>sofort freigeschaltet</b>. Sie haben schon ein Konto? Dann oben „Anmelden“ wählen.</span>`;
+  $("inviteBanner").style.display="flex";
+}
 
 // ---------- Admin: Partner ----------
 let pkEdit=null, pkLatLng=null, pkAll=[];
@@ -1213,13 +1380,15 @@ function route(h){
   else if(h==="admin") openAdmin();
   else if(h==="kontakt") go("kontakt");
   else if(h==="werkstatt-anfrage") go("wsform");
+  else if(h.startsWith("einladung-")) openInvite(h.slice(10));
+  else if(h.startsWith("passwort-")) openPwReset(h.slice(9));
   else if(h==="werkstatt-registrieren") openWerkstattSignup();
   else if(PT_KAT[h]) openPartners(h);
 }
 document.addEventListener("click", e=>{ const a=e.target.closest('a[href^="#"]'); if(!a) return; e.preventDefault(); route(a.getAttribute("href")); });
 window.addEventListener("hashchange", ()=>route(location.hash));
 route(location.hash);
-sb.auth.onAuthStateChange((evt)=>{ if(evt==="SIGNED_OUT"){ stopDriver(); } });
+sb.auth.onAuthStateChange((evt)=>{ if(evt==="SIGNED_OUT"){ stopDriver(); } if(evt==="PASSWORD_RECOVERY"){ pwMode={ type:"session" }; go("newpw"); } });
 </script>
 </body>
 </html>
