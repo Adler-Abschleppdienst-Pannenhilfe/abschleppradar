@@ -17,11 +17,11 @@ html,body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,
   header{padding:10px 10px;gap:5px}
   .logo{font-size:15px;gap:5px;min-width:0;flex-shrink:1;white-space:nowrap;letter-spacing:-.4px}.logo svg{width:22px;height:22px;flex:none}
   .hbtn{padding:6px 8px;font-size:12px;flex:none}
-  #logoutBtn{font-size:0;padding:6px 9px}#logoutBtn::before{content:"⎋ Abmelden";font-size:12px}
+  #logoutBtn{font-size:0;padding:5px 10px}#logoutBtn::before{content:"⎋";font-size:18px}
   .seg button{padding:9px 4px;font-size:13px}
   #backBtn{font-size:0}#backBtn::before{content:"←";font-size:16px}
 }
-@media (max-width:380px){ #logoutBtn::before{content:"⎋";font-size:17px} .logo{font-size:14px} }
+@media (max-width:380px){ .logo{font-size:14px} }
 .svc{font-size:13px;color:var(--text);background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:7px 12px;text-decoration:none}
 .svc:hover{border-color:var(--accent)}
 .tgbtn{display:inline-flex;align-items:center;gap:8px;background:#229ED9;color:#fff;border:0;border-radius:10px;padding:9px 13px;font-weight:700;text-decoration:none;cursor:pointer;font-size:14px}
@@ -343,6 +343,7 @@ footer a{color:var(--muted)}
       <div><label for="abrMonat">Monat</label><input type="month" id="abrMonat"></div>
       <div><label for="abrPreis">€ pro Auftrag (netto)</label><input type="number" id="abrPreis" min="0" step="0.5" value="4"></div>
     </div>
+    <div class="info" id="abrFrei" style="display:none"></div>
     <div class="hint">Berechnet wird jeder angenommene Auftrag – auch wenn er zurückgegeben wurde. Nicht berechnet: Kunde storniert innerhalb von 10 Minuten nach Annahme, oder von Ihnen erlassen (Tab „Protokoll“).</div>
     <div id="abrOut" style="margin-top:14px"></div>
     <button class="btn ghost small" onclick="copyAbr()">📋 Übersicht kopieren</button>
@@ -1086,7 +1087,7 @@ async function loadAdmDrivers(){
   $("admDrvList").innerHTML = (pending?`<div class="info"><span>🔔</span><span><b>${pending}</b> neue Registrierung(en) warten auf Freischaltung.</span></div>`:"") +
     (data.length? data.map(d=>`<div class="card" style="margin-top:10px">
       <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
-        <div><b>${d.typ==="werkstatt"?"🔧":"🚛"} ${esc(d.firma)}</b> ${d.pro?`<span class="tag new">⭐ Pro</span>`:""}${d.approved?`<span class="tag ok">Freigeschaltet</span>`:`<span class="tag new">Wartet</span>`}
+        <div><b>${d.typ==="werkstatt"?"🔧":"🚛"} ${esc(d.firma)}</b> ${d.pro?`<span class="tag new">⭐ Pro${d.pro_frei_bis?" · provisionsfrei bis "+new Date(d.pro_frei_bis).toLocaleDateString("de-DE"):""}</span>`:""}${d.approved?`<span class="tag ok">Freigeschaltet</span>`:`<span class="tag new">Wartet</span>`}
           <div class="hint">📞 ${esc(d.tel)}<br>${esc(loginLabel(d.email))}<br>Registriert ${new Date(d.created_at).toLocaleDateString("de-DE")} · ${d.auftraege} Aufträge</div></div>
       </div>
       ${d.id===user.id ? "" : d.approved
@@ -1121,6 +1122,7 @@ async function setApproved(id, ok, btn){
 $("abrMonat").onchange = loadAbr;
 $("abrPreis").oninput = () => { store.set("ar_preis", $("abrPreis").value); renderAbr(); };
 async function loadAbr(){
+  try{ const { data:kb } = await sb.rpc("admin_kostenlos_bis"); if(kb){ const d=new Date(kb); $("abrFrei").style.display = d>Date.now() ? "flex" : "none"; $("abrFrei").innerHTML=`<span>🎁</span><span>Gratisphase: Für alle Firmen kostenlos bis <b>${d.toLocaleDateString("de-DE")}</b>. Pro-Partner danach noch 3 Monate provisionsfrei. Diese Aufträge erscheinen hier als „nicht berechnet“.</span>`; } }catch(e){}
   $("abrOut").innerHTML=`<div class="empty">Lädt …</div>`;
   const r=monthRange($("abrMonat").value);
   const { data, error } = await sb.rpc("admin_abrechnung", { p_von:r.von, p_bis:r.bis });
