@@ -1,0 +1,16 @@
+# AbschleppRadar – hält die Supabase-Datenbank wach (verhindert die Pause nach 7 Tagen)
+name: Wachhalten
+on:
+  schedule:
+    - cron: "17 5 * * *"   # jeden Tag um ca. 6:17 Uhr
+  workflow_dispatch:        # Knopf "Run workflow" zum Testen
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Supabase anpingen
+        run: |
+          curl -sS -f -X POST "https://tgpabumwznytuplybejc.supabase.co/rest/v1/rpc/is_admin" \
+            -H "apikey: sb_publishable_aJ8s0M0GtuVna3LgBpD9jw_rGGA7TMp" \
+            -H "Content-Type: application/json" -d '{}'
+          echo " – Supabase ist wach ✅"
