@@ -138,6 +138,25 @@ footer a{color:var(--muted)}
 .live{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
 .live i{width:8px;height:8px;border-radius:50%;background:var(--green);animation:blink 1.6s infinite}
 @keyframes blink{50%{opacity:.3}}
+.qrbox{display:none}
+@media (min-width:900px){
+  .app{max-width:1080px}
+  header{padding:16px 28px}
+  main{padding:28px}
+  .view:not(#v-start){max-width:600px;margin:0 auto}
+  #v-start.active{display:grid;grid-template-columns:1.05fr 1fr;column-gap:56px;align-items:center;min-height:62vh;align-content:center}
+  #v-start .start-more{grid-column:1/-1;margin-top:28px}
+  #v-start h1{font-size:42px;margin-bottom:14px}
+  #v-start .lead{font-size:18px;margin-bottom:28px}
+  #installBtn,#iosHint{display:none!important}
+  .qrbox{display:flex;align-items:center;gap:16px;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:14px;max-width:420px}
+  .qrbox img{background:#fff;border-radius:10px;padding:6px;flex:none}
+  .qrbox b{display:block;font-size:16px;margin-bottom:4px}.qrbox small{color:var(--muted);font-size:14px;line-height:1.4}
+  #v-start .soon{grid-template-columns:repeat(4,1fr);gap:12px}
+  #v-start .soon .svc{padding:14px 10px;font-size:15px}
+  footer{max-width:1080px;width:100%;margin:0 auto}
+}
+@media (min-width:900px) and (display-mode:standalone){ .qrbox{display:none} }
 </style>
 </head>
 <body>
@@ -154,8 +173,15 @@ footer a{color:var(--muted)}
 <main>
 <!-- START -->
 <section class="view active" id="v-start">
+  <div class="start-left">
   <h1>Pannenhilfe in Ihrer Nähe – schnell und direkt.</h1>
   <p class="lead">Wählen Sie, wie Sie AbschleppRadar nutzen möchten.</p>
+  <div class="qrbox">
+    <img src="qr.svg" alt="QR-Code zu abschleppradar.de" width="112" height="112">
+    <div><b>Mit dem Handy scannen</b><small>AbschleppRadar immer dabei – im Notfall mit einem Fingertipp Hilfe anfordern.</small></div>
+  </div>
+  </div>
+  <div class="start-right">
   <button class="choice k" onclick="go('kunde')">
     <div class="ic"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ff9f1c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.6"/></svg></div>
     <div><b>Ich brauche Hilfe</b><small>Abschleppdienst oder Pannenhilfe anfordern – sofort oder zum Wunschtermin.</small></div>
@@ -167,8 +193,11 @@ footer a{color:var(--muted)}
   <button class="btn ghost small" id="lastReqBtn" style="display:none" onclick="showOk()">Meine letzte Anfrage ansehen</button>
   <button class="btn ghost small" id="installBtn" style="display:none" onclick="installApp()">📲 Als App aufs Handy holen</button>
   <div class="info" id="iosHint" style="display:none;margin-top:8px"><span>📲</span><span>Tippen Sie unten in Safari auf <b>Teilen</b> <span style="font-size:17px">⎙</span> und dann auf <b>„Zum Home-Bildschirm“</b>. AbschleppRadar erscheint dann als App-Symbol.</span></div>
+  </div>
+  <div class="start-more">
   <h3 style="margin-top:20px">Weitere Services in Ihrer Nähe</h3>
   <div class="soon"><a class="svc" href="#gutachter">🔍 Gutachter</a><a class="svc" href="#werkstatt">🔧 Werkstätten</a><a class="svc" href="#autowaesche">🧽 Autowäsche</a><a class="svc" href="#reifenservice">🛞 Reifenservice</a></div>
+  </div>
 </section>
 
 <!-- KUNDE -->
