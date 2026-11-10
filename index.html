@@ -69,7 +69,7 @@ h3{font-size:13px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted
 .choice .ic{width:58px;height:58px;border-radius:16px;display:grid;place-items:center;flex:none}
 .choice.k .ic{background:rgba(255,159,28,.15)}.choice.f .ic{background:rgba(77,163,255,.15)}
 .choice b{display:block;font-size:18px;margin-bottom:3px}.choice small{color:var(--muted);font-size:14px;line-height:1.4}
-.soon{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
+.soon{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:18px}.soon .svc{display:flex;align-items:center;justify-content:center;gap:6px;text-align:center;padding:10px 8px;white-space:nowrap}
 .soon span{font-size:12px;color:var(--muted);border:1px dashed var(--line);border-radius:20px;padding:5px 11px}
 label{display:block;font-size:14px;color:var(--muted);margin:12px 0 6px}
 input,select,textarea{width:100%;background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:12px;padding:12px 13px;outline:none}
@@ -234,6 +234,7 @@ footer a{color:var(--muted)}
   <div class="card" id="okDriver" style="display:none"></div>
   <div id="okLive" style="display:none;margin-top:12px"><div id="okMap" style="height:230px;border-radius:12px;overflow:hidden"></div><div class="hint" id="okLiveTxt" style="margin-top:6px"></div></div>
   <div id="okRate"></div>
+  <div id="okPush"></div>
   <div id="okOffers"></div>
   <div class="center" style="margin-top:12px"><span class="live"><i></i>Status wird automatisch aktualisiert</span></div>
   <button class="btn red small" id="cancelBtn" onclick="cancelReq()">Anfrage stornieren</button>
@@ -297,6 +298,7 @@ footer a{color:var(--muted)}
     <button data-s="offline">● Offline</button>
   </div>
   <div class="gpsbox" id="fGps" style="margin-top:12px"><span id="fGpsTxt">Standort wird ermittelt …</span></div>
+  <div class="gpsbox" id="pushBox" style="margin-top:10px;flex-wrap:wrap;display:none"></div>
   <div class="gpsbox" id="tgBox" style="margin-top:10px;flex-wrap:wrap"></div>
   <div class="gpsbox" id="linkBox" style="margin-top:10px;flex-wrap:wrap"></div>
   <label>Einsatz-Umkreis</label>
@@ -356,6 +358,11 @@ footer a{color:var(--muted)}
     </div>
     <h3>Offene Einladungen</h3>
     <div id="ivList"></div>
+    <div class="card" style="margin-top:14px"><b>📣 Nachricht an alle Firmen</b>
+      <p class="hint" style="margin:4px 0 8px">Kommt als Handy-Benachrichtigung bei allen Firmen an, die Benachrichtigungen eingeschaltet haben.</p>
+      <input id="bcTitle" maxlength="60" placeholder="Titel, z. B. Neue Funktion">
+      <textarea id="bcText" maxlength="300" rows="2" placeholder="Text (freiwillig)" style="margin-top:8px"></textarea>
+      <button class="btn small" onclick="sendBroadcast(this)">📣 Senden</button></div>
     <h3>Registrierte Firmen</h3>
     <div id="admDrvList"></div>
   </div>
@@ -488,7 +495,7 @@ footer a{color:var(--muted)}
     <li>Art des Problems, gewünschtes Ziel, Zeitpunkt und Ihre Beschreibung,</li>
     <li>Kontaktdaten (Name, Telefonnummer, optional E-Mail).</li>
   </ul>
-  <p>Standort, Fahrzeug- und Auftragsdaten werden freigeschalteten Abschleppunternehmen in Ihrer Umgebung angezeigt – in der App und, falls das Unternehmen dies aktiviert hat, als Benachrichtigung über den Messenger Telegram (siehe Abschnitt 6) –, damit diese den Auftrag annehmen können. <b>Name, Telefonnummer und E-Mail sieht ausschließlich das Unternehmen, das Ihren Auftrag annimmt bzw. dessen Angebot Sie auswählen.</b> Sie erhalten im Gegenzug Firmennamen, Telefonnummer, Preis und ggf. Ankunftszeit dieses Unternehmens. Bei Sofort-Aufträgen sehen Sie während der Anfahrt zusätzlich den aktuellen Standort des Abschleppers auf einer Karte. Nach dem Auftrag können Sie freiwillig eine Bewertung (1–5 Sterne, optional Kommentar) abgeben; sie wird ohne Ihren Namen gespeichert und dem Unternehmen sowie – als Durchschnitt – anderen Kunden angezeigt. Bei Terminaufträgen sehen Sie die Angebote mehrerer Unternehmen (Firmenname, Preis, Hinweis). Bei Werkstatt-Anfragen werden Ort, Fahrzeug und Ihre Problembeschreibung an Werkstätten im Umkreis weitergegeben; Sie erhalten unverbindliche Preisschätzungen und wählen eine Werkstatt aus. Rufen Sie AbschleppRadar über den Link eines bestimmten Unternehmens auf, wird Ihre Anfrage zunächst für einige Minuten nur diesem Unternehmen angezeigt.</p>
+  <p>Standort, Fahrzeug- und Auftragsdaten werden freigeschalteten Abschleppunternehmen in Ihrer Umgebung angezeigt – in der App und, falls das Unternehmen dies aktiviert hat, als Benachrichtigung über den Messenger Telegram (siehe Abschnitt 6) –, damit diese den Auftrag annehmen können. <b>Name, Telefonnummer und E-Mail sieht ausschließlich das Unternehmen, das Ihren Auftrag annimmt bzw. dessen Angebot Sie auswählen.</b> Sie erhalten im Gegenzug Firmennamen, Telefonnummer, Preis und ggf. Ankunftszeit dieses Unternehmens. Bei Sofort-Aufträgen sehen Sie während der Anfahrt zusätzlich den aktuellen Standort des Abschleppers auf einer Karte. Nach dem Auftrag können Sie freiwillig eine Bewertung (1–5 Sterne, optional Kommentar) abgeben; sie wird ohne Ihren Namen gespeichert und dem Unternehmen sowie – als Durchschnitt – anderen Kunden angezeigt. Wenn Sie Benachrichtigungen erlauben, speichern wir die technische Push-Adresse Ihres Browsers (keine Telefonnummer), um Ihnen Neuigkeiten zu Ihrer Anfrage zu schicken; sie wird zusammen mit der Anfrage gelöscht. Zugestellt werden die Nachrichten über den Push-Dienst Ihres Browsers (z. B. Google oder Apple). Bei Terminaufträgen sehen Sie die Angebote mehrerer Unternehmen (Firmenname, Preis, Hinweis). Bei Werkstatt-Anfragen werden Ort, Fahrzeug und Ihre Problembeschreibung an Werkstätten im Umkreis weitergegeben; Sie erhalten unverbindliche Preisschätzungen und wählen eine Werkstatt aus. Rufen Sie AbschleppRadar über den Link eines bestimmten Unternehmens auf, wird Ihre Anfrage zunächst für einige Minuten nur diesem Unternehmen angezeigt.</p>
   <p>Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO (Durchführung vorvertraglicher Maßnahmen auf Ihre Anfrage) sowie Ihre Einwilligung nach Art. 6 Abs. 1 lit. a DSGVO für die Weitergabe an Abschleppunternehmen. Sie können Ihre Einwilligung jederzeit mit Wirkung für die Zukunft widerrufen, z. B. indem Sie die Anfrage stornieren oder uns kontaktieren.</p>
   <p><b>Speicherdauer:</b> Auftragsdaten werden automatisch 6 Monate nach Eingang gelöscht, sofern keine gesetzlichen Aufbewahrungspflichten entgegenstehen. Das annehmende Unternehmen ist für Daten, die es für die Durchführung und Abrechnung des Auftrags selbst speichert, eigenständig verantwortlich.</p>
 
@@ -496,7 +503,7 @@ footer a{color:var(--muted)}
   <p>Ihr genauer Standort wird nur ermittelt, wenn Sie auf „Standort automatisch ermitteln“ tippen bzw. als Abschlepper die Standortfreigabe erlauben. Ihr Browser fragt dafür vorher um Erlaubnis. Sie können die Freigabe jederzeit in den Browser-Einstellungen widerrufen und Ihre Adresse stattdessen manuell eingeben.</p>
 
   <h4>6. Registrierung als Abschlepper</h4>
-  <p>Für Abschleppunternehmen verarbeiten wir E-Mail-Adresse, Passwort (nur verschlüsselt gespeichert), Firmenname, Telefonnummer, Verfügbarkeitsstatus, Einsatz-Umkreis und – während die App geöffnet ist – den aktuellen Standort. Während eines angenommenen Sofort-Auftrags sieht der jeweilige Kunde Ihren aktuellen Standort auf einer Karte, damit er weiß, wann Sie ankommen; nach Abschluss des Auftrags nicht mehr. Kunden können Ihre Leistung nach dem Auftrag mit 1–5 Sternen und einem freiwilligen Kommentar bewerten; der Durchschnitt wird anderen Kunden angezeigt. Firmenname und Telefonnummer werden Kundinnen und Kunden angezeigt, deren Auftrag Sie angenommen haben. Neue Konten werden von uns manuell geprüft und freigeschaltet. Für die Abrechnung der Vermittlungsgebühr protokollieren wir jeden angenommenen Auftrag (Firma, Zeitpunkt, Ort und Art des Auftrags, ggf. Rückgabe oder Stornierung) – ohne Kundendaten. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b und c DSGVO. Die Kontodaten werden gelöscht, sobald Sie Ihr Konto löschen lassen; Abrechnungsdaten bewahren wir für die Dauer der gesetzlichen Aufbewahrungsfristen auf.</p>
+  <p>Für Abschleppunternehmen verarbeiten wir E-Mail-Adresse, Passwort (nur verschlüsselt gespeichert), Firmenname, Telefonnummer, Verfügbarkeitsstatus, Einsatz-Umkreis und – während die App geöffnet ist – den aktuellen Standort. Während eines angenommenen Sofort-Auftrags sieht der jeweilige Kunde Ihren aktuellen Standort auf einer Karte, damit er weiß, wann Sie ankommen; nach Abschluss des Auftrags nicht mehr. Kunden können Ihre Leistung nach dem Auftrag mit 1–5 Sternen und einem freiwilligen Kommentar bewerten; der Durchschnitt wird anderen Kunden angezeigt. Wenn Sie Handy-Benachrichtigungen einschalten, speichern wir die technische Push-Adresse Ihres Geräts, um Ihnen neue Aufträge zu melden; beim Abmelden wird sie gelöscht. Firmenname und Telefonnummer werden Kundinnen und Kunden angezeigt, deren Auftrag Sie angenommen haben. Neue Konten werden von uns manuell geprüft und freigeschaltet. Für die Abrechnung der Vermittlungsgebühr protokollieren wir jeden angenommenen Auftrag (Firma, Zeitpunkt, Ort und Art des Auftrags, ggf. Rückgabe oder Stornierung) – ohne Kundendaten. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b und c DSGVO. Die Kontodaten werden gelöscht, sobald Sie Ihr Konto löschen lassen; Abrechnungsdaten bewahren wir für die Dauer der gesetzlichen Aufbewahrungsfristen auf.</p>
 
   <p><b>Telegram-Benachrichtigung (freiwillig):</b> Abschlepper können ihr Konto mit dem Messenger Telegram verbinden, um über neue Aufträge informiert zu werden. Dafür speichern wir die Telegram-Chat-ID. Bei einem neuen Auftrag im Umkreis senden wir über Telegram eine Nachricht mit Auftragsnummer, Art des Problems, Ort/Straße, Fahrzeug und Zeitpunkt – <b>ohne Name und Telefonnummer des Kunden</b>. Anbieter ist Telegram Messenger Inc. bzw. Telegram FZ-LLC (Dubai, Vereinigte Arabische Emirate); für die Nutzung von Telegram gelten deren Datenschutzbestimmungen. Rechtsgrundlage ist Ihre Einwilligung (Art. 6 Abs. 1 lit. a DSGVO), die Sie jederzeit in der App über „Trennen“ widerrufen können.</p>
 
@@ -533,11 +540,71 @@ footer a{color:var(--muted)}
 <div class="toast" id="toast"></div>
 
 <script>
+// ---------- Push-Benachrichtigungen ----------
+const VAPID_PUBLIC = "BJruccRIWkjXzvdKjkqbUl2JwyVw2ulRCoSDAjPCIbbvotByWsyphX7ARPXHrI9CJUJRwNgUiEcLRbiCC3_T1-c";
+const pushSupported = () => "serviceWorker" in navigator && "PushManager" in window && "Notification" in window && window.isSecureContext;
+function b64uToU8(s){ s=s.replace(/-/g,"+").replace(/_/g,"/"); while(s.length%4) s+="="; const b=atob(s); return Uint8Array.from(b,c=>c.charCodeAt(0)); }
+async function getPushSub(ask){
+  if(!pushSupported()) throw new Error("Ihr Browser unterstützt keine Benachrichtigungen.");
+  if(ask){ const p = await Notification.requestPermission(); if(p!=="granted") throw new Error("Benachrichtigungen wurden nicht erlaubt. Sie können das in den Browser-Einstellungen ändern."); }
+  else if(Notification.permission!=="granted") return null;
+  const reg = await navigator.serviceWorker.register("sw.js").then(()=>navigator.serviceWorker.ready);
+  let sub = await reg.pushManager.getSubscription();
+  if(!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey:b64uToU8(VAPID_PUBLIC) });
+  const j = sub.toJSON(); return { endpoint:j.endpoint, p256dh:j.keys.p256dh, auth:j.keys.auth };
+}
+function pushHintIOS(){ return isIOS && !isStandalone() ? "Auf dem iPhone: zuerst unten auf <b>Teilen</b> → <b>„Zum Home-Bildschirm“</b>, dann AbschleppRadar über das neue Symbol öffnen." : ""; }
+// Firma
+async function renderPush(){
+  const box=$("pushBox"); if(!driver) return;
+  const ios=pushHintIOS();
+  if(!pushSupported() && !ios){ box.style.display="none"; return; }
+  box.style.display="flex";
+  if(ios){ box.classList.remove("ok"); box.innerHTML=`<span style="flex:1">🔔 Neue Aufträge als Handy-Benachrichtigung: ${ios}</span>`; return; }
+  let s=null; try{ s=await getPushSub(false); }catch(e){}
+  if(s){ sb.rpc("push_save_fahrer",{ p_endpoint:s.endpoint, p_p256dh:s.p256dh, p_auth:s.auth }).then(()=>{});
+    box.classList.add("ok"); box.innerHTML=`<span style="flex:1">✅ Handy-Benachrichtigungen sind an – neue Aufträge kommen auch bei geschlossener App.</span><button class="linkbtn" onclick="pushTest(this)">Test</button>`; }
+  else { box.classList.remove("ok"); box.innerHTML=`<span style="flex:1;min-width:180px">🔔 Neue Aufträge direkt als Handy-Benachrichtigung – ganz ohne Telegram.</span><button class="hbtn" style="display:block;margin:0" onclick="pushOn(this)">🔔 Einschalten</button>`; }
+}
+async function pushOn(btn){
+  btn.disabled=true;
+  try{ const s=await getPushSub(true); const { error } = await sb.rpc("push_save_fahrer",{ p_endpoint:s.endpoint, p_p256dh:s.p256dh, p_auth:s.auth }); if(error) throw error;
+       toast("🔔 Benachrichtigungen eingeschaltet"); renderPush(); }
+  catch(e){ btn.disabled=false; toast(e.message||errText(e)); }
+}
+async function pushTest(btn){ btn.disabled=true; const { data, error } = await sb.rpc("push_test"); btn.disabled=false; toast(error?errText(error):(data?"Test gesendet – kommt in wenigen Sekunden":"Kein Gerät angemeldet")); }
+async function pushOffOnLogout(){ try{ const s=await getPushSub(false); if(s) await sb.rpc("push_delete_fahrer",{ p_endpoint:s.endpoint }); }catch(e){} }
+// Kunde
+function renderKundePush(d){
+  const box=$("okPush"), last=store.get("ar_last");
+  if(!last || !["neu","angenommen"].includes(d.status)){ box.innerHTML=""; return; }
+  if(store.get("ar_push_"+last.id)){ box.innerHTML=`<div class="hint center" style="margin-top:10px">🔔 Sie bekommen eine Benachrichtigung, sobald sich etwas tut.</div>`; return; }
+  if(d.status!=="neu"){ box.innerHTML=""; return; }
+  const ios=pushHintIOS();
+  if(!pushSupported()){ box.innerHTML = ios ? `<div class="hint" style="margin-top:10px">🔔 ${ios}</div>` : ""; return; }
+  box.innerHTML=`<button class="btn ghost small" onclick="kundePushOn(this)">🔔 Benachrichtigen, wenn jemand zusagt</button>`;
+}
+async function kundePushOn(btn){
+  const last=store.get("ar_last"); if(!last) return; btn.disabled=true;
+  try{ const s=await getPushSub(true); const { error } = await sb.rpc("push_save_kunde",{ p_id:last.id, p_token:last.token, p_endpoint:s.endpoint, p_p256dh:s.p256dh, p_auth:s.auth }); if(error) throw error;
+       store.set("ar_push_"+last.id, 1); toast("🔔 Wir benachrichtigen Sie"); $("okPush").innerHTML=`<div class="hint center" style="margin-top:10px">🔔 Sie bekommen eine Benachrichtigung, sobald sich etwas tut.</div>`; }
+  catch(e){ btn.disabled=false; toast(e.message||errText(e)); }
+}
+// Admin
+async function sendBroadcast(btn){
+  const t=$("bcTitle").value.trim(), x=$("bcText").value.trim(); if(!t) return toast("Bitte einen Titel eingeben");
+  if(!confirmTwice(btn,"Wirklich an alle senden?")) return;
+  btn.disabled=true; const { data, error } = await sb.rpc("admin_push",{ p_title:t, p_body:x }); btn.disabled=false; btn.textContent="📣 Senden";
+  if(error) return toast(errText(error));
+  toast(data?`An ${data} Gerät${data>1?"e":""} gesendet`:"Noch keine Firma hat Benachrichtigungen eingeschaltet"); if(data){ $("bcTitle").value=""; $("bcText").value=""; }
+}
+function confirmTwice(btn,txt){ if(btn.dataset.c==="1"){ btn.dataset.c=""; return true; } btn.dataset.c="1"; const o=btn.textContent; btn.textContent=txt; setTimeout(()=>{ if(btn.dataset.c==="1"){ btn.dataset.c=""; btn.textContent=o; } },4000); return false; }
+
 // ---------- App installieren (PWA) ----------
 let installEvt=null;
 const isStandalone = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone===true;
 const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
-if("serviceWorker" in navigator && location.protocol==="https:") navigator.serviceWorker.register("sw.js").catch(()=>{});
+if("serviceWorker" in navigator && window.isSecureContext && location.protocol!=="file:") navigator.serviceWorker.register("sw.js").catch(()=>{});
 addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt=e; const b=document.getElementById("installBtn"); if(b && !isStandalone()) b.style.display="block"; });
 addEventListener("appinstalled", () => { installEvt=null; const b=document.getElementById("installBtn"); if(b) b.style.display="none"; });
 addEventListener("DOMContentLoaded", () => { if(isIOS && !isStandalone()) document.getElementById("installBtn").style.display="block"; });
@@ -687,7 +754,7 @@ async function refreshStatus(){
   if(document.querySelector('#okOffers [data-confirm="1"]')) return; // Auswahl läuft gerade
   const { data, error } = await sb.rpc("get_request_status", { p_id:last.id, p_token:last.token });
   if(error || !data){ $("okTitle").textContent="Anfrage nicht gefunden"; $("okText").textContent=""; return; }
-  const s=data.status; $("okDriver").style.display="none"; $("okOffers").innerHTML=""; $("okLive").style.display="none"; renderRate(data); $("cancelBtn").style.display = ["neu","angenommen"].includes(s) ? "block" : "none"; $("okPulse").classList.toggle("done", s!=="neu");
+  const s=data.status; $("okDriver").style.display="none"; $("okOffers").innerHTML=""; $("okLive").style.display="none"; renderRate(data); renderKundePush(data); $("cancelBtn").style.display = ["neu","angenommen"].includes(s) ? "block" : "none"; $("okPulse").classList.toggle("done", s!=="neu");
   const ws = data.kategorie==="werkstatt";
   const WS_NOTE = `<div class="hint" style="margin-top:8px">Unverbindliche Schätzung – der endgültige Preis kann erst nach Prüfung vor Ort festgelegt werden.</div>`;
   if(s==="neu" && ws){
@@ -861,7 +928,7 @@ async function saveProfile(){
   if(error) return msg("pMsg", errText(error));
   loadDriver();
 }
-async function logout(){ stopDriver(); await sb.auth.signOut(); user=null; driver=null; toast("Abgemeldet"); go("start"); }
+async function logout(){ stopDriver(); await pushOffOnLogout(); await sb.auth.signOut(); user=null; driver=null; toast("Abgemeldet"); go("start"); }
 
 // ================= FAHRER: Dashboard =================
 let activeJob=false, map=null, meMarker=null, radCircle=null, reqLayer=null, requests=[], me=null, watchId=null, lastPush=0, channel=null, pollTimer=null;
@@ -921,7 +988,7 @@ async function copyFirmLink(btn){
 
 function startDriver(){
   $("fHello").textContent = driver.firma;
-  renderTelegram(); renderFirmLink(); loadMyRatings();
+  renderTelegram(); renderFirmLink(); loadMyRatings(); renderPush();
   $("rad").value = driver.radius_km; $("radVal").textContent = driver.radius_km+" km";
   me = (driver.lat!=null && driver.lng!=null) ? [driver.lat, driver.lng] : null;
   if(driver.status==="offline") setStatus("verfuegbar");
@@ -1507,6 +1574,7 @@ if(store.get("ar_last")) $("lastReqBtn").style.display="block";
 function route(h){
   h=(h||"").replace("#","");
   if(h==="hilfe") go("kunde");
+  else if(h==="status"){ if(store.get("ar_last")) showOk(); else go("start"); }
   else if(h.startsWith("hilfe-")){ setPrefFirma(h.slice(6)); go("kunde"); }
   else if(h==="fahrer") openDriver();
   else if(h==="impressum" || h==="datenschutz") go(h);
