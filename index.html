@@ -79,6 +79,13 @@ textarea{min-height:70px;resize:vertical}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .chip{background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:22px;padding:9px 14px;cursor:pointer;font-size:14px}
 .chip.on{background:var(--accent);border-color:var(--accent);color:#1a1200;font-weight:600}
+.probgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.ptile{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:14px;padding:12px;cursor:pointer;font-size:15px;font-weight:600;text-align:left;min-height:52px}
+.ptile span{font-size:22px;line-height:1}
+.ptile.on{background:var(--accent);border-color:var(--accent);color:#1a1200}
+.pq{margin-top:12px}.pq>label{display:block;margin:0 0 6px}
+.pwarn{margin-top:10px}
+@media (min-width:900px){.probgrid{grid-template-columns:repeat(4,minmax(0,1fr))}}
 .seg{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px}
 .seg button{flex:1;background:none;border:0;color:var(--muted);padding:10px;border-radius:9px;cursor:pointer;font-weight:600}
 .seg button.on{background:var(--panel2);color:var(--text)}
@@ -205,7 +212,19 @@ footer a{color:var(--muted)}
   <h2>Hilfe anfordern</h2>
   <div class="info" id="firmBanner" style="display:none;margin-bottom:6px"></div>
   <form id="kForm" novalidate>
-    <h3>1 · Ihr Standort</h3>
+    <h3>1 · Was ist passiert?</h3>
+    <div class="probgrid" id="probChips"></div>
+    <div id="probQs"></div>
+    <div id="zielBox" style="display:none">
+      <label for="kZiel">Wohin soll das Fahrzeug?</label>
+      <input id="kZiel" placeholder="Werkstatt oder Adresse">
+    </div>
+    <div class="info" id="unfallHint" style="display:none"><span>🔍</span><span>Nach einem Unfall brauchen Sie oft ein <b>Gutachten</b> – bei unverschuldeten Unfällen zahlt das meist die gegnerische Versicherung. <a href="#gutachter">Gutachter in der Nähe ansehen</a> (Ihr Formular bleibt erhalten).</span></div>
+    <label for="kNote">Beschreibung <span style="opacity:.6">(optional)</span></label>
+    <textarea id="kNote" placeholder="z. B. Auto springt nicht an, Warnblinker an"></textarea>
+
+
+    <h3>2 · Ihr Standort</h3>
     <div class="gpsbox" id="gpsBox"><span id="gpsTxt">Standort noch nicht ermittelt</span></div>
     <button type="button" class="btn ghost small" id="geoBtn">📍 Standort automatisch ermitteln</button>
     <div id="manualLoc">
@@ -215,7 +234,7 @@ footer a{color:var(--muted)}
     <label for="kStr">Straße, Hausnr. oder Autobahn-km</label>
     <input id="kStr" placeholder="z. B. Ostwall 120 oder A57 km 12">
 
-    <h3>2 · Ihr Fahrzeug</h3>
+    <h3>3 · Ihr Fahrzeug</h3>
     <div class="row">
       <div><label for="kMarke">Marke</label><input id="kMarke" list="marken" placeholder="z. B. Mercedes"></div>
       <div><label for="kModell">Modell</label><input id="kModell" placeholder="z. B. B180"></div>
@@ -223,16 +242,6 @@ footer a{color:var(--muted)}
     <datalist id="marken"><option>Audi</option><option>BMW</option><option>Citroën</option><option>Dacia</option><option>Fiat</option><option>Ford</option><option>Hyundai</option><option>Kia</option><option>Mercedes-Benz</option><option>Nissan</option><option>Opel</option><option>Peugeot</option><option>Renault</option><option>Seat</option><option>Skoda</option><option>Tesla</option><option>Toyota</option><option>VW</option></datalist>
     <label for="kKz">Kennzeichen <span style="opacity:.6">(optional)</span></label>
     <input id="kKz" placeholder="KR-AB 123">
-
-    <h3>3 · Was ist passiert?</h3>
-    <div class="chips" id="probChips"></div>
-    <div id="zielBox" style="display:none">
-      <label for="kZiel">Wohin soll das Fahrzeug?</label>
-      <input id="kZiel" placeholder="Werkstatt oder Adresse">
-    </div>
-    <div class="info" id="unfallHint" style="display:none"><span>🔍</span><span>Nach einem Unfall brauchen Sie oft ein <b>Gutachten</b> – bei unverschuldeten Unfällen zahlt das meist die gegnerische Versicherung. <a href="#gutachter">Gutachter in der Nähe ansehen</a> (Ihr Formular bleibt erhalten).</span></div>
-    <label for="kNote">Beschreibung <span style="opacity:.6">(optional)</span></label>
-    <textarea id="kNote" placeholder="z. B. Auto springt nicht an, Warnblinker an"></textarea>
 
     <h3>4 · Wann?</h3>
     <div class="seg" id="whenSeg"><button type="button" data-v="sofort" class="on">Sofort</button><button type="button" data-v="termin">Termin wählen</button></div>
@@ -713,8 +722,45 @@ async function setPrefFirma(kurz){
     else prefFirma=null;
   }catch(e){ prefFirma=null; }
 }
-$("probChips").innerHTML = PROBS.map(p=>`<button type="button" class="chip" data-p="${p[0]}">${p[1]} ${p[2]}</button>`).join("");
-$("probChips").onclick = e => { const b=e.target.closest(".chip"); if(!b) return; const p=b.dataset.p; selProb.has(p)?selProb.delete(p):selProb.add(p); b.classList.toggle("on"); $("zielBox").style.display = selProb.has("abschleppen") ? "block" : "none"; $("unfallHint").style.display = selProb.has("unfall") ? "flex" : "none"; };
+// Pro Problem passende Fragen (Antworten gehen als „Details“ an den Abschlepper)
+const PQ = {
+  abschleppen:[["rollt","Lässt sich das Auto noch schieben?",["Ja, rollt","Räder blockiert","Weiß nicht"]],
+               ["antrieb","Getriebe / Antrieb",["Schaltung","Automatik","Allrad","Elektro / Hybrid"]],
+               ["wo","Wo steht das Auto?",["Straße","Parkplatz","Tiefgarage","Autobahn"]]],
+  starthilfe:[["start","Was passiert beim Starten?",["Gar nichts","Es klickt","Dreht langsam"]],
+              ["motor","Antrieb",["Benzin","Diesel","Hybrid","Elektro"]]],
+  reifen:[["ersatz","Ersatzrad dabei?",["Ja","Nein","Nur Pannenset","Weiß nicht"]],
+          ["schloss","Felgenschloss-Schlüssel dabei?",["Ja","Nein","Kein Felgenschloss","Weiß nicht"]]],
+  schluessel:[["wo","Wo ist der Schlüssel?",["Im Auto eingeschlossen","Verloren","Abgebrochen"]],
+              ["kind","Ist ein Kind oder Tier im Auto?",["Nein","Ja"]]],
+  kraftstoff:[["art","Welcher Kraftstoff?",["Benzin","Diesel","Akku leer (E-Auto)"]],
+              ["falsch","Falsch getankt?",["Nein","Ja – Motor nicht gestartet","Ja – Motor lief"]]],
+  unfall:[["verletzt","Ist jemand verletzt?",["Nein","Ja"]],
+          ["faehrt","Ist das Auto noch fahrbereit?",["Ja","Nein"]],
+          ["polizei","Polizei informiert?",["Ja","Nein","Nicht nötig"]]],
+  sonstiges:[]
+};
+let qa = {};
+const needsTow = () => selProb.has("abschleppen") || (selProb.has("unfall") && qa.faehrt==="Nein");
+function probUi(){
+  $("zielBox").style.display = needsTow() ? "block" : "none";
+  $("unfallHint").style.display = selProb.has("unfall") ? "flex" : "none";
+  const w=$("probWarn"); if(w) w.style.display = (qa.kind==="Ja" || qa.verletzt==="Ja") ? "flex" : "none";
+}
+function renderQs(p){
+  qa = {};
+  const qs = PQ[p] || [];
+  $("probQs").innerHTML = qs.map(([k,t,opts])=>`<div class="pq"><label>${t}</label><div class="chips" data-q="${k}">${opts.map(o=>`<button type="button" class="chip" data-a="${esc(o)}">${esc(o)}</button>`).join("")}</div></div>`).join("")
+    + `<div class="info pwarn" id="probWarn" style="display:none;border-color:#e74c3c"><span>🚨</span><span><b>Bei Gefahr sofort 112 anrufen!</b> Wir informieren trotzdem Helfer in Ihrer Nähe.</span></div>`;
+  $("kNote").placeholder = p==="sonstiges" ? "Bitte kurz beschreiben, was passiert ist" : "Weitere Details (optional)";
+}
+$("probChips").innerHTML = PROBS.map(p=>`<button type="button" class="ptile" data-p="${p[0]}"><span>${p[1]}</span>${p[2]}</button>`).join("");
+$("probChips").onclick = e => { const b=e.target.closest(".ptile"); if(!b) return; const p=b.dataset.p;
+  selProb = new Set([p]); [...$("probChips").children].forEach(x=>x.classList.toggle("on", x===b)); renderQs(p); probUi(); };
+$("probQs").onclick = e => { const b=e.target.closest(".chip"); if(!b) return; const g=b.parentElement, k=g.dataset.q;
+  const same = qa[k]===b.dataset.a; [...g.children].forEach(x=>x.classList.remove("on"));
+  if(same) delete qa[k]; else { qa[k]=b.dataset.a; b.classList.add("on"); } probUi(); };
+function probDetails(){ const p=[...selProb][0]; const qs=PQ[p]||[]; return qs.filter(q=>qa[q[0]]).map(q=>`${q[1].replace(/\?$/,"")}: ${qa[q[0]]}`).join(" · "); }
 $("whenSeg").onclick = e => { const b=e.target.closest("button"); if(!b) return; when=b.dataset.v; [...$("whenSeg").children].forEach(x=>x.classList.toggle("on",x===b)); $("terminBox").style.display = when==="termin" ? "flex" : "none"; };
 
 $("geoBtn").onclick = async () => {
@@ -739,7 +785,8 @@ $("kForm").onsubmit = async e => {
   if(!v("kStr")) errs.push("Straße bzw. genauen Standort angeben");
   if(!v("kMarke")) errs.push("Fahrzeugmarke angeben");
   if(!selProb.size) errs.push("Problem auswählen");
-  if(selProb.has("abschleppen") && !v("kZiel")) errs.push("Zieladresse für das Abschleppen angeben");
+  if(needsTow() && !v("kZiel")) errs.push("Zieladresse für das Abschleppen angeben");
+  if(selProb.has("sonstiges") && !v("kNote")) errs.push("kurz beschreiben, was passiert ist");
   if(when==="termin" && (!v("kDatum")||!v("kZeit"))) errs.push("Datum und Uhrzeit wählen");
   if(!v("kName")) errs.push("Name angeben");
   if(v("kTel").replace(/\D/g,"").length<6) errs.push("gültige Telefonnummer angeben");
@@ -756,18 +803,19 @@ $("kForm").onsubmit = async e => {
     }
     const termin = when==="termin" ? new Date(`${v("kDatum")}T${v("kZeit")}`).toISOString() : null;
     let zielKm = null;
-    if(selProb.has("abschleppen") && v("kZiel")){
+    if(needsTow() && v("kZiel")){
       $("kSubmit").textContent="Strecke wird berechnet …";
       const z = await geocode(v("kZiel")) || await geocode(v("kZiel")+", "+v("kOrt"));
       if(z) zielKm = await routeKm([lat,lng], z);
     }
     const { data, error } = await sb.rpc("create_request", {
       p_lat:lat, p_lng:lng, p_ort:v("kOrt"), p_strasse:v("kStr"), p_marke:v("kMarke"), p_modell:v("kModell"), p_kennzeichen:v("kKz"),
-      p_probleme:[...selProb], p_ziel:v("kZiel"), p_notiz:v("kNote"), p_wann:when, p_termin:termin,
+      p_probleme: needsTow() && !selProb.has("abschleppen") ? [...selProb,"abschleppen"] : [...selProb], p_ziel: needsTow() ? v("kZiel") : "",
+      p_notiz: [probDetails(), v("kNote")].filter(Boolean).join("\n").slice(0,300), p_wann:when, p_termin:termin,
       p_name:v("kName"), p_tel:v("kTel"), p_mail:v("kMail"), p_firma:prefFirma, p_ziel_km:zielKm });
     if(error) throw error;
     store.set("ar_last", { id:data.id, nr:data.nr, token:data.token, t:Date.now() });
-    $("kForm").reset(); selProb.clear(); gps=null; document.querySelectorAll("#probChips .chip").forEach(c=>c.classList.remove("on"));
+    $("kForm").reset(); selProb.clear(); qa={}; gps=null; document.querySelectorAll("#probChips .ptile").forEach(c=>c.classList.remove("on")); $("probQs").innerHTML="";
     $("zielBox").style.display="none"; $("unfallHint").style.display="none"; $("gpsBox").classList.remove("ok"); $("gpsTxt").textContent="Standort noch nicht ermittelt";
     showOk();
   }catch(err){ msg("kMsg", errText(err)); }
