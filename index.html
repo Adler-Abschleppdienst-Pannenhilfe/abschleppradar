@@ -1349,7 +1349,7 @@ async function loadAdmDrivers(){
   $("admDrvList").innerHTML = (pending?`<div class="info"><span>🔔</span><span><b>${pending}</b> neue Registrierung(en) warten auf Freischaltung.</span></div>`:"") +
     (data.length? data.map(d=>`<div class="card" style="margin-top:10px">
       <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
-        <div><b>${d.typ==="werkstatt"?"🔧":"🚛"} ${esc(d.firma)}</b> ${d.pro?`<span class="tag new">⭐ Pro${d.pro_frei_bis?" · provisionsfrei bis "+new Date(d.pro_frei_bis).toLocaleDateString("de-DE"):""}</span>`:""}${d.approved?`<span class="tag ok">Freigeschaltet</span>`:`<span class="tag new">Wartet</span>`}
+        <div><b>${d.typ==="werkstatt"?"🔧":"🚛"} ${esc(d.firma)}</b> ${d.pro?`<span class="tag new">⭐ Pro · provisionsfrei</span>`:""}${d.approved?`<span class="tag ok">Freigeschaltet</span>`:`<span class="tag new">Wartet</span>`}
           <div class="hint">📞 ${esc(d.tel)}<br>${esc(loginLabel(d.email))}<br>Registriert ${new Date(d.created_at).toLocaleDateString("de-DE")} · ${d.auftraege} Aufträge${d.bew_anzahl>0?` · <a href="javascript:void 0" onclick="admRatings('${d.id}','${esc(d.firma).replace(/'/g,"")}')">⭐ ${String(d.sterne).replace(".",",")} (${d.bew_anzahl})</a>`:""}</div></div>
       </div>
       ${d.id===user.id ? "" : d.approved
@@ -1384,7 +1384,7 @@ async function setApproved(id, ok, btn){
 $("abrMonat").onchange = loadAbr;
 $("abrPreis").oninput = () => { store.set("ar_preis", $("abrPreis").value); renderAbr(); };
 async function loadAbr(){
-  try{ const { data:kb } = await sb.rpc("admin_kostenlos_bis"); if(kb){ const d=new Date(kb); $("abrFrei").style.display = d>Date.now() ? "flex" : "none"; $("abrFrei").innerHTML=`<span>🎁</span><span>Gratisphase: Für alle Firmen kostenlos bis <b>${d.toLocaleDateString("de-DE")}</b>. Pro-Partner danach noch 3 Monate provisionsfrei. Diese Aufträge erscheinen hier als „nicht berechnet“.</span>`; } }catch(e){}
+  try{ const { data:kb } = await sb.rpc("admin_kostenlos_bis"); if(kb){ const d=new Date(kb); $("abrFrei").style.display = d>Date.now() ? "flex" : "none"; $("abrFrei").innerHTML=`<span>🎁</span><span>Gratisphase: Für alle Firmen kostenlos bis <b>${d.toLocaleDateString("de-DE")}</b>, Werkstätten bis <b>01.12.2027</b>. Pro-Partner (9,90 €/Monat) zahlen keine Auftragsgebühr. Diese Aufträge erscheinen hier als „nicht berechnet“.</span>`; } }catch(e){}
   $("abrOut").innerHTML=`<div class="empty">Lädt …</div>`;
   const r=monthRange($("abrMonat").value);
   const { data, error } = await sb.rpc("admin_abrechnung", { p_von:r.von, p_bis:r.bis });
