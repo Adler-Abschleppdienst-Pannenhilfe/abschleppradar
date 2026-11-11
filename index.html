@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="de" class="fixstart">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -70,6 +70,16 @@ h3{font-size:13px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted
 .choice.k .ic{background:rgba(255,159,28,.15)}.choice.f .ic{background:rgba(77,163,255,.15)}
 .choice b{display:block;font-size:18px;margin-bottom:3px}.choice small{color:var(--muted);font-size:14px;line-height:1.4}
 .soon{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:18px}.soon .svc{display:flex;align-items:center;justify-content:center;gap:6px;text-align:center;padding:10px 8px;white-space:nowrap}
+@media (max-width:899px){
+  #v-start{padding-top:0}
+  #v-start h1{font-size:24px;margin:0 0 4px}
+  #v-start .lead{font-size:14px;margin-bottom:14px}
+  #v-start .choice{padding:15px;margin-bottom:10px;gap:14px}
+  #v-start .choice .ic{width:50px;height:50px}
+  #v-start h3{margin-top:14px!important}
+  #v-start .soon{margin-top:10px}
+}
+html.fixstart,html.fixstart body{overscroll-behavior-y:none}
 .soon span{font-size:12px;color:var(--muted);border:1px dashed var(--line);border-radius:20px;padding:5px 11px}
 label{display:block;font-size:14px;color:var(--muted);margin:12px 0 6px}
 input,select,textarea{width:100%;background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:12px;padding:12px 13px;outline:none}
@@ -194,8 +204,8 @@ footer a{color:var(--muted)}
     <div><b>Ich brauche Hilfe</b><small>Abschleppdienst oder Pannenhilfe anfordern – sofort oder zum Wunschtermin.</small></div>
   </button>
   <button class="choice f" onclick="openDriver()">
-    <div class="ic"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#4da3ff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 16V9h9v7"/><path d="M11 11h4l3 3v2h-7"/><path d="M14 9l6-5"/><circle cx="6" cy="17" r="1.8"/><circle cx="16" cy="17" r="1.8"/></svg></div>
-    <div><b>Ich bin Abschlepper</b><small>Aufträge im Umkreis sehen, annehmen und direkt losfahren.</small></div>
+    <div class="ic"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#4da3ff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 13h18"/><path d="M11 13v2h2v-2"/></svg></div>
+    <div><b>Für Betriebe</b><small>Abschleppdienste, Werkstätten &amp; mehr – Aufträge aus Ihrer Nähe erhalten.</small></div>
   </button>
   <button class="btn ghost small" id="lastReqBtn" style="display:none" onclick="showOk()">Meine letzte Anfrage ansehen</button>
   <button class="btn ghost small" id="installBtn" style="display:none" onclick="installApp()">📲 Als App aufs Handy holen</button>
@@ -701,6 +711,7 @@ function go(v, push=true){
   if(v==="start") hist=[];
   document.querySelectorAll(".view").forEach(x=>x.classList.remove("active"));
   $("v-"+v).classList.add("active"); current=v;
+  document.documentElement.classList.toggle("fixstart", v==="start");
   $("backBtn").style.display = v==="start" ? "none" : "block";
   $("logoutBtn").style.display = ["fahrer","wait","profil","admin"].includes(v) ? "block" : "none";
   if(v!=="ok") stopStatusPoll();
