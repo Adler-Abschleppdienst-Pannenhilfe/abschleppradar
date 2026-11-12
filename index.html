@@ -109,6 +109,13 @@ textarea{min-height:70px;resize:vertical}
 .msg{font-size:14px;margin-top:12px;padding:11px 13px;border-radius:12px;display:none;line-height:1.4}
 .msg.err{display:block;background:rgba(255,92,92,.12);color:#ffb3b3;border:1px solid rgba(255,92,92,.35)}
 .msg.ok{display:block;background:rgba(46,204,113,.12);color:#a8f0c6;border:1px solid rgba(46,204,113,.35)}
+.pwchips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.pwchips span{background:var(--panel2);border:1px solid var(--line);border-radius:20px;padding:6px 11px;font-size:14px}
+.pwsteps,.pwlist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.pwsteps li{display:flex;gap:12px;align-items:flex-start;font-size:15px;line-height:1.45}
+.pwsteps i{font-style:normal;flex:none;width:28px;height:28px;border-radius:50%;background:var(--accent);color:#1a1200;font-weight:800;display:grid;place-items:center;font-size:14px}
+.pwlist li{display:flex;gap:10px;align-items:flex-start;font-size:15px;line-height:1.45}
+.pwcond{display:flex;flex-direction:column;gap:0;padding:4px 16px}.pwcond>div{display:flex;flex-direction:column;gap:3px;padding:12px 0;border-bottom:1px solid var(--line);font-size:14px;line-height:1.45}.pwcond>div:last-child{border:0}.pwcond span{color:var(--muted)}
+.pwfree{color:var(--green)}.pwpro{margin-top:12px;border-color:rgba(255,159,28,.5)}
 .check{display:flex;gap:10px;align-items:flex-start;margin-top:16px;font-size:14px;color:var(--muted);line-height:1.4}
 .check input{width:20px;height:20px;flex:none;margin-top:1px;accent-color:var(--accent)}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
@@ -300,6 +307,7 @@ footer a{color:var(--muted)}
 <!-- FAHRER: LOGIN / REGISTRIERUNG -->
 <section class="view" id="v-login">
   <h2>Für Abschlepper</h2>
+  <a class="linkbtn" href="#partner-werden" style="display:inline-block;margin:-8px 0 10px;padding:0">ℹ️ Neu hier? Alle Infos &amp; Konditionen für Partner</a>
   <div class="info" id="inviteBanner" style="display:none;margin-bottom:12px"></div>
   <div class="seg" id="authSeg"><button type="button" data-v="login" class="on">Anmelden</button><button type="button" data-v="signup">Registrieren</button></div>
   <form id="authForm" novalidate>
@@ -492,14 +500,63 @@ footer a{color:var(--muted)}
   <button class="btn blue" id="npBtn" onclick="pwSave()">Passwort speichern</button>
 </section>
 
+<!-- PARTNER WERDEN -->
+<section class="view" id="v-mitmachen">
+  <h2>Partner werden</h2>
+  <p class="lead" style="margin-bottom:14px">AbschleppRadar startet am <b>01.12.2026</b> – deutschlandweit. Jetzt in der Pilotphase: Werden Sie <b>Gründungspartner</b> und erhalten Sie Aufträge aus Ihrer Nähe.</p>
+
+  <div class="card">
+    <b>Für wen?</b>
+    <div class="pwchips"><span>🚛 Abschleppdienste &amp; Pannenhilfe</span><span>🔧 Werkstätten</span><span>🔍 Kfz-Gutachter</span><span>🛞 Reifenservice</span><span>🧽 Aufbereitung &amp; Autowäsche</span></div>
+  </div>
+
+  <h3>So funktioniert's</h3>
+  <ol class="pwsteps">
+    <li><i>1</i><span><b>Registrieren</b> – Firmenname und Telefon, dauert 2 Minuten.</span></li>
+    <li><i>2</i><span><b>Freischaltung</b> – wir schalten Ihr Konto frei.</span></li>
+    <li><i>3</i><span><b>Anfragen erhalten</b> – aus Ihrem Umkreis, direkt aufs Handy (App-Benachrichtigung oder Telegram).</span></li>
+    <li><i>4</i><span><b>Preis nennen</b> – Sie bestimmen Ihren Preis selbst. Der Kunde wählt, Sie erhalten seine Kontaktdaten.</span></li>
+  </ol>
+
+  <h3>Ihre Vorteile</h3>
+  <ul class="pwlist">
+    <li><svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#ff9f1c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:2px"><path d="M5 12.5 L10 17 L19 7"/></svg><span>Neue Kunden aus Ihrer Region – ohne eigene Werbekosten</span></li>
+    <li><svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#ff9f1c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:2px"><path d="M5 12.5 L10 17 L19 7"/></svg><span>Sie legen Ihren Preis und Ihren Einsatz-Umkreis selbst fest</span></li>
+    <li><svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#ff9f1c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:2px"><path d="M5 12.5 L10 17 L19 7"/></svg><span>Sofort-Aufträge und Termine – Sie entscheiden, was Sie annehmen</span></li>
+    <li><svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#ff9f1c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:2px"><path d="M5 12.5 L10 17 L19 7"/></svg><span>Bewertungen Ihrer Kunden stärken Ihr Profil</span></li>
+  </ul>
+
+  <h3>Konditionen in der Pilotphase</h3>
+  <div class="card pwcond">
+    <div><b>Abschleppdienste, Reifenservice, Aufbereitung</b><span><b class="pwfree">6 Monate kostenlos</b> – bis 31.05.2027. Danach Gebühr pro vermitteltem Auftrag bzw. für den Eintrag.</span></div>
+    <div><b>Werkstätten</b><span><b class="pwfree">1 Jahr kostenlos</b> – bis 30.11.2027.</span></div>
+    <div><b>Kfz-Gutachter</b><span>Konditionen auf Anfrage – sprechen Sie uns an.</span></div>
+  </div>
+  <div class="card pwpro">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px"><b style="font-size:17px">⭐ Pro-Partner</b><b style="font-size:20px;color:var(--accent)">9,90 € / Monat</b></div>
+    <ul class="pwlist" style="margin-top:8px">
+      <li><svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#ff9f1c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:2px"><path d="M5 12.5 L10 17 L19 7"/></svg><span>Keine Auftragsgebühr</span></li>
+      <li><svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#ff9f1c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:2px"><path d="M5 12.5 L10 17 L19 7"/></svg><span>Eigener Firmen-Link &amp; QR-Code: Ihre Kunden erreichen zuerst Sie (5 Minuten exklusiv)</span></li>
+      <li><svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#ff9f1c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:2px"><path d="M5 12.5 L10 17 L19 7"/></svg><span>Pro-Kennzeichnung bei Ihren Angeboten</span></li>
+      <li><svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#ff9f1c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:2px"><path d="M5 12.5 L10 17 L19 7"/></svg><span>Werbepaket: Sticker, Duftbäume, Schlüsselanhänger</span></li>
+    </ul>
+  </div>
+
+  <h3>Jetzt mitmachen</h3>
+  <button class="btn" style="margin-top:4px" onclick="openSignup('abschlepper')">🚛 Als Abschleppdienst registrieren</button>
+  <button class="btn ghost" style="margin-top:10px" onclick="openSignup('werkstatt')">🔧 Als Werkstatt registrieren</button>
+  <a class="btn ghost" style="margin-top:10px" href="mailto:info@abschleppradar.de?subject=Partner%20werden%20bei%20AbschleppRadar">✉️ Gutachter, Reifenservice, Aufbereitung: Eintrag anfragen</a>
+  <p class="hint center" style="margin-top:14px">Fragen? Rufen Sie an: <a href="tel:+491624340038">0162 434 0038</a> · <a href="mailto:info@abschleppradar.de">info@abschleppradar.de</a></p>
+</section>
+
 <!-- KONTAKT -->
 <section class="view" id="v-kontakt">
   <h2>Kontakt</h2>
   <div class="card" id="kontaktCard">
-    <p class="hint" style="margin:6px 0 10px">Fragen zur Plattform, Partner werden (z. B. Werkstatt, Autowäsche, Reifenservice) oder Feedback? Wir freuen uns auf Ihre Nachricht.</p>
+    <p class="hint" style="margin:6px 0 10px">Fragen zur Plattform, Partner werden (z. B. Werkstatt, Autowäsche, Reifenservice) oder Feedback? Wir freuen uns auf Ihre Nachricht. <a href="#partner-werden">Infos für Partner</a></p>
     <div class="summary">
       <div><span>Telefon</span><span><a href="tel:+491624340038">0162 434 0038</a></span></div>
-      <div><span>E-Mail</span><span><a href="mailto:info@autotransportadler.com">info@autotransportadler.com</a></span></div>
+      <div><span>E-Mail</span><span><a href="mailto:info@abschleppradar.de">info@abschleppradar.de</a></span></div>
       <div><span>Betreiber</span><span>Auto Transport Adler, Krefeld</span></div>
     </div>
     <p class="hint" style="margin:10px 0 0">Für Pannenhilfe bitte oben „Ich brauche Hilfe“ wählen – so erreichen Sie direkt die Abschlepper in Ihrer Nähe.</p>
@@ -1437,7 +1494,8 @@ async function setErlassen(id,val){
 // ---------- Registrierung: Kontotyp ----------
 $("aTyp").onclick = e => { const b=e.target.closest("button"); if(!b) return; [...$("aTyp").children].forEach(x=>x.classList.toggle("on",x===b)); };
 function regTyp(){ return $("aTyp").querySelector("button.on").dataset.v; }
-function openWerkstattSignup(){ go("login"); $("authSeg").querySelector('[data-v=signup]').click(); $("aTyp").querySelector('[data-v=werkstatt]').click(); }
+function openWerkstattSignup(){ openSignup("werkstatt"); }
+function openSignup(typ){ go("login"); $("authSeg").querySelector('[data-v=signup]').click(); $("aTyp").querySelector('[data-v='+typ+']').click(); }
 
 // ---------- Kunde: Werkstatt-Anfrage ----------
 let wsGps=null;
@@ -1731,6 +1789,7 @@ function route(h){
   else if(h.startsWith("einladung-")) openInvite(h.slice(10));
   else if(h.startsWith("passwort-")) openPwReset(h.slice(9));
   else if(h==="werkstatt-registrieren") openWerkstattSignup();
+  else if(h==="partner-werden") go("mitmachen");
   else if(PT_KAT[h]) openPartners(h);
 }
 document.addEventListener("click", e=>{ const a=e.target.closest('a[href^="#"]'); if(!a) return; e.preventDefault(); route(a.getAttribute("href")); });
