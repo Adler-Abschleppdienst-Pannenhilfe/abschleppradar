@@ -149,6 +149,13 @@ textarea{min-height:70px;resize:vertical}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--line);padding:12px 18px;border-radius:12px;font-size:14px;display:none;z-index:3000;max-width:90%}
 footer{padding:16px 18px 24px;color:var(--muted);font-size:12px;text-align:center;border-top:1px solid var(--line);line-height:1.6}
 footer a{color:var(--muted)}
+#pzBtn{background:none;border:0;padding:0;margin:0;font:inherit;color:var(--muted);cursor:pointer;white-space:nowrap}
+.mbr{display:none}
+@media (max-width:899px){
+  .fsep{display:none!important}.mbr{display:inline}.dk{display:none}
+  #pzBox{display:block;height:18px;line-height:18px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+  #pzBtn{line-height:18px}
+}
 .kpis{display:flex;gap:10px;margin-top:14px}
 .kpis div{flex:1;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center}
 .kpis b{display:block;font-size:20px}.kpis small{color:var(--muted);font-size:12px}
@@ -584,10 +591,8 @@ footer a{color:var(--muted)}
 </main>
 
 <footer>
-  <div id="pzBox" style="display:none;margin-bottom:6px"><button type="button" class="linkbtn" id="pzBtn" style="color:var(--text);text-decoration:none;font-size:13px" onclick="pzClick()"></button></div>
-  <div id="pzAdm" class="hint" style="display:none;margin:0 0 6px"></div>
-  AbschleppRadar · ein Service von <a href="https://www.autotransportadler.com" target="_blank" rel="noopener">Auto Transport Adler</a><br>
-  <a href="#impressum">Impressum</a> · <a href="#datenschutz">Datenschutz</a> · <a href="#kontakt">Kontakt</a> · Karten © OpenStreetMap-Mitwirkende
+  <span>AbschleppRadar · ein Service von <a href="https://www.autotransportadler.com" target="_blank" rel="noopener">Auto Transport Adler</a></span><span class="fsep"> · </span><br class="mbr">
+  <a href="#impressum">Impressum</a> · <a href="#datenschutz">Datenschutz</a> · <a href="#kontakt">Kontakt</a> · <span class="dk">Karten </span>© OpenStreetMap<span class="dk">-Mitwirkende</span><span class="fsep" id="pzSep" style="display:none"> · </span><span id="pzBox"><button type="button" id="pzBtn" onclick="pzClick()"></button></span>
 </footer>
 </div>
 
@@ -1671,17 +1676,16 @@ async function pzLoad(){
     const { data, error } = await sb.rpc("partner_counts", { p_lat: pzPos?pzPos[0]:null, p_lng: pzPos?pzPos[1]:null, p_km:100 });
     if(error) throw error;
     pzData=data||{}; pzRender();
-  }catch(e){ $("pzBox").style.display="none"; }
+  }catch(e){ $("pzBtn").innerHTML=""; $("pzSep").style.display="none"; }
 }
 function pzRender(){
-  const d=pzData||{}, box=$("pzBox"), b=$("pzBtn");
-  if(d.nah!=null && pzShowNah){ b.innerHTML=`🤝 <b>${pzN(d.nah)}</b> Partnerbetriebe im Umkreis von 100 km <span style="color:var(--muted)">· alle anzeigen</span>`; box.style.display="block"; }
-  else if(d.gesamt!=null){ b.innerHTML=`🤝 <b>${pzN(d.gesamt)}</b> Partnerbetriebe deutschlandweit`+(d.nah!=null?` <span style="color:var(--muted)">· in Ihrer Nähe</span>`:(!pzPos?` <span style="color:var(--muted)">· 📍 in Ihrer Nähe?</span>`:"")); box.style.display="block"; }
-  else box.style.display="none";
-  const adm = d.admin===true;
-  const besucher = pzVisitors!=null ? pzN(pzVisitors) : "…";
-  $("pzAdm").style.display = adm ? "block" : "none";
-  if(adm) $("pzAdm").innerHTML = `Admin: 🟢 ${pzN(d.online)} online · ${pzN(d.gesamt)} Partner gesamt · 👀 ${besucher} Besucher jetzt`;
+  const d=pzData||{}, b=$("pzBtn"), adm=d.admin===true;
+  const besucher = pzVisitors!=null ? pzN(pzVisitors) : "–";
+  if(adm) b.innerHTML = `🤝 <b>${pzN(d.gesamt)}</b> Partner${d.nah!=null?` · 📍 ${pzN(d.nah)}`:""} · 🟢 ${pzN(d.online)} online · 👀 ${besucher}`;
+  else if(d.nah!=null && pzShowNah) b.innerHTML = `📍 <b>${pzN(d.nah)}</b> Partnerbetriebe bis 100 km`;
+  else if(d.gesamt!=null) b.innerHTML = `🤝 <b>${pzN(d.gesamt)}</b> Partnerbetriebe`+(!pzPos?` · in der Nähe?`:"");
+  else b.innerHTML = "";
+  $("pzSep").style.display = b.innerHTML ? "" : "none";
   if(adm) $("admStats").innerHTML = `<div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between">
     <div><div class="hint" style="margin:0">🟢 Partner online</div><b style="font-size:22px">${pzN(d.online)}</b></div>
     <div><div class="hint" style="margin:0">🤝 Partner gesamt</div><b style="font-size:22px">${pzN(d.gesamt)}</b></div>
@@ -1691,7 +1695,7 @@ function pzRender(){
 async function pzClick(){
   const d=pzData||{};
   if(!pzPos){
-    $("pzBtn").textContent="Standort wird ermittelt …";
+    $("pzBtn").textContent="📍 Standort …";
     try{ const p=await getPos({ enableHighAccuracy:false, timeout:10000, maximumAge:600000 }); pzPos=[p.coords.latitude,p.coords.longitude]; pzShowNah=true; await pzLoad(); }
     catch(e){ toast("Standort nicht verfügbar"); pzRender(); }
     return;
