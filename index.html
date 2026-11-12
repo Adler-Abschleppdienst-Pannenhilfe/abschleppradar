@@ -100,6 +100,7 @@ textarea{min-height:70px;resize:vertical}
 .seg{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px}
 .seg button{flex:1;background:none;border:0;color:var(--muted);padding:10px;border-radius:9px;cursor:pointer;font-weight:600}
 .seg button.on{background:var(--panel2);color:var(--text)}
+#adminSeg{flex-wrap:wrap;gap:2px}#adminSeg button{flex:1 1 auto;padding:9px 8px;font-size:13px}
 .btn{display:block;width:100%;background:var(--accent);color:#1a1200;border:0;border-radius:14px;padding:15px;font-weight:700;font-size:16px;cursor:pointer;margin-top:22px;text-align:center;text-decoration:none}
 .btn:hover{background:var(--accent2)}.btn:disabled{opacity:.5;cursor:wait}
 .btn.ghost{background:none;border:1px solid var(--line);color:var(--text);font-weight:600}
@@ -377,7 +378,20 @@ footer a{color:var(--muted)}
 <section class="view" id="v-admin">
   <h2>Admin</h2>
   <div class="card" id="admStats" style="margin-bottom:12px">Lädt …</div>
-  <div class="seg" id="adminSeg"><button type="button" data-v="drivers" class="on">Abschlepper</button><button type="button" data-v="abr">Abrechnung</button><button type="button" data-v="log">Protokoll</button><button type="button" data-v="partner">Partner</button></div>
+  <div class="seg" id="adminSeg"><button type="button" data-v="drivers" class="on">Abschlepper</button><button type="button" data-v="abr">Abrechnung</button><button type="button" data-v="log">Protokoll</button><button type="button" data-v="partner">Partner</button><button type="button" data-v="qr">QR</button></div>
+
+  <div id="adm-qr" style="display:none;margin-top:14px">
+    <div class="card">
+      <b>🔳 QR-Codes zuweisen</b>
+      <p class="hint" style="margin:6px 0 4px">Vorgedruckte Codes (Sticker, Duftbäume) einer Firma zuordnen. Wer scannt, landet bei „Hilfe anfordern“ – die Anfrage geht zuerst an diese Firma (nur Pro-Firmen). Freie Codes führen zur normalen Hilfe-Seite.</p>
+      <div class="row"><div><label for="qrVon">Von Nr.</label><input id="qrVon" type="number" min="1" inputmode="numeric" placeholder="1"></div><div><label for="qrBis">Bis Nr.</label><input id="qrBis" type="number" min="1" inputmode="numeric" placeholder="10"></div></div>
+      <label for="qrFirma">Firma</label><select id="qrFirma"><option value="">— frei (keine Firma) —</option></select>
+      <button class="btn small" onclick="qrAssign(this)">Zuweisen</button>
+      <div class="msg" id="qrMsg"></div>
+    </div>
+    <div id="qrList" style="margin-top:12px"></div>
+    <button class="btn ghost small" onclick="qrAdd(this)">➕ 50 neue Codes anlegen</button>
+  </div>
 
   <div id="adm-partner" style="display:none;margin-top:14px">
     <div class="card">
@@ -1406,8 +1420,8 @@ async function openAdmin(){
 $("adminSeg").onclick = e => { const b=e.target.closest("button"); if(b) adminTab(b.dataset.v); };
 function adminTab(t){
   admTab=t; [...$("adminSeg").children].forEach(x=>x.classList.toggle("on", x.dataset.v===t));
-  ["drivers","abr","log","partner"].forEach(x=>$("adm-"+x).style.display = x===t ? "block" : "none");
-  if(t==="drivers") loadAdmDrivers(); else if(t==="abr") loadAbr(); else if(t==="partner") loadAdmPartners(); else loadLog();
+  ["drivers","abr","log","partner","qr"].forEach(x=>$("adm-"+x).style.display = x===t ? "block" : "none");
+  if(t==="drivers") loadAdmDrivers(); else if(t==="abr") loadAbr(); else if(t==="partner") loadAdmPartners(); else if(t==="qr") loadQr(); else loadLog();
 }
 async function loadAdmDrivers(){
   loadInvites();
@@ -1773,6 +1787,41 @@ try{
 pzLoad(); setInterval(pzLoad, 120000);
 sb.auth.onAuthStateChange(evt=>{ if(evt==="SIGNED_IN"||evt==="SIGNED_OUT") setTimeout(pzLoad, 500); });
 
+// ================= QR-Pool =================
+async function openQr(code){
+  go("kunde");
+  try{ const { data } = await sb.rpc("qr_resolve", { p_code:code }); if(data) setPrefFirma(data); }catch(e){}
+}
+async function loadQr(){
+  $("qrList").innerHTML=`<div class="empty">Lädt …</div>`;
+  const [q, d] = await Promise.all([ sb.rpc("admin_qr_list"), sb.rpc("admin_drivers") ]);
+  if(q.error){ $("qrList").innerHTML=`<div class="msg err">${esc(errText(q.error))}</div>`; return; }
+  const sel=$("qrFirma"), keep=sel.value;
+  sel.innerHTML=`<option value="">— frei (keine Firma) —</option>` + (d.data||[]).filter(x=>x.approved).sort((a,b)=>(b.pro-a.pro)||String(a.firma).localeCompare(b.firma))
+    .map(x=>`<option value="${esc(x.id)}">${x.pro?"⭐ ":""}${esc(x.firma)}${x.pro?"":" (kein Pro)"}</option>`).join("");
+  sel.value=keep;
+  const rows=q.data||[]; const groups=[];
+  rows.forEach(r=>{ const g=groups[groups.length-1]; if(g && g.driver_id===r.driver_id && g.bis===r.nr-1){ g.bis=r.nr; g.scans+=r.scans; if(r.last_scan&&(!g.last||r.last_scan>g.last)) g.last=r.last_scan; } else groups.push({ von:r.nr, bis:r.nr, driver_id:r.driver_id, firma:r.firma, pro:r.pro, scans:r.scans, last:r.last_scan }); });
+  const frei=rows.filter(r=>!r.driver_id).length, sum=rows.reduce((a,r)=>a+r.scans,0);
+  const nr=n=>"q"+String(n).padStart(4,"0");
+  $("qrList").innerHTML=`<div class="hint" style="margin:0 0 8px">${rows.length} Codes · ${frei} frei · ${sum} Scans gesamt</div>`+groups.map(g=>`<div class="card" style="margin-bottom:8px;${g.driver_id?"":"opacity:.7"}">
+    <div style="display:flex;justify-content:space-between;gap:10px"><div><b>${nr(g.von)}${g.bis>g.von?" – "+nr(g.bis):""}</b> <span class="hint">(${g.bis-g.von+1} Stück)</span>
+    <div class="hint">${g.driver_id?`${g.pro?"⭐ ":""}${esc(g.firma||"?")}${g.pro?"":" – kein Pro, Code führt zur normalen Seite"}`:"frei"}</div></div>
+    <div style="text-align:right;flex:none"><b>${g.scans}</b><div class="hint" style="margin:0">Scans${g.last?" · zuletzt "+ago(g.last):""}</div></div></div></div>`).join("");
+}
+async function qrAssign(btn){
+  const von=parseInt($("qrVon").value,10), bis=parseInt($("qrBis").value||$("qrVon").value,10), drv=$("qrFirma").value||null;
+  if(!von||!bis||bis<von) return msg("qrMsg","Bitte gültige Nummern eingeben (z. B. 1 bis 10).");
+  btn.disabled=true; const { data, error } = await sb.rpc("admin_qr_assign", { p_von:von, p_bis:bis, p_driver:drv }); btn.disabled=false;
+  if(error) return msg("qrMsg", errText(error));
+  msg("qrMsg", `${data} Code(s) ${drv?"zugewiesen":"freigegeben"}.`, true); loadQr();
+}
+async function qrAdd(btn){
+  if(!confirmTwice(btn,"Wirklich 50 neue Codes anlegen?")) return;
+  btn.disabled=true; const { data, error } = await sb.rpc("admin_qr_add", { p_anzahl:50 }); btn.disabled=false; btn.textContent="➕ 50 neue Codes anlegen";
+  if(error) return toast(errText(error)); toast("Neue Codes bis q"+String(data).padStart(4,"0")+" angelegt"); loadQr();
+}
+
 // ================= Start =================
 if(store.get("ar_last")) $("lastReqBtn").style.display="block";
 
@@ -1791,6 +1840,7 @@ function route(h){
   else if(h.startsWith("passwort-")) openPwReset(h.slice(9));
   else if(h==="werkstatt-registrieren") openWerkstattSignup();
   else if(h==="partner-werden") go("mitmachen");
+  else if(/^q\d{4}$/.test(h)) openQr(h);
   else if(PT_KAT[h]) openPartners(h);
 }
 document.addEventListener("click", e=>{ const a=e.target.closest('a[href^="#"]'); if(!a) return; e.preventDefault(); route(a.getAttribute("href")); });
