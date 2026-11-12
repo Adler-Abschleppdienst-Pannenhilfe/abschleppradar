@@ -528,18 +528,19 @@ footer a{color:var(--muted)}
 
   <h3>Konditionen in der Pilotphase</h3>
   <div class="card pwcond">
-    <div><b>Abschleppdienste, Reifenservice, Aufbereitung</b><span><b class="pwfree">6 Monate kostenlos</b> – bis 31.05.2027. Danach Gebühr pro vermitteltem Auftrag bzw. für den Eintrag.</span></div>
+    <div><b>Abschleppdienste, Reifenservice, Aufbereitung</b><span><b class="pwfree">6 Monate kostenlos</b> – bis 31.05.2027. Danach zahlen Sie nur für vermittelte Aufträge (bzw. für den Verzeichnis-Eintrag) – keine Grundgebühr.</span></div>
     <div><b>Werkstätten</b><span><b class="pwfree">1 Jahr kostenlos</b> – bis 30.11.2027.</span></div>
     <div><b>Kfz-Gutachter</b><span>Konditionen auf Anfrage – sprechen Sie uns an.</span></div>
   </div>
   <div class="card pwpro">
-    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px"><b style="font-size:17px">⭐ Pro-Partner</b><b style="font-size:20px;color:var(--accent)">9,90 € / Monat</b></div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px"><b style="font-size:17px">⭐ Pro-Partner</b><span style="text-align:right"><b style="font-size:20px;color:var(--accent)">19,99 € / Monat</b><span class="hint" style="display:block;margin:0">inkl. MwSt.</span></span></div>
     <ul class="pwlist" style="margin-top:8px">
       <li><svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#ff9f1c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:2px"><path d="M5 12.5 L10 17 L19 7"/></svg><span>Keine Auftragsgebühr</span></li>
       <li><svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#ff9f1c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:2px"><path d="M5 12.5 L10 17 L19 7"/></svg><span>Eigener Firmen-Link &amp; QR-Code: Ihre Kunden erreichen zuerst Sie (5 Minuten exklusiv)</span></li>
       <li><svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#ff9f1c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:2px"><path d="M5 12.5 L10 17 L19 7"/></svg><span>Pro-Kennzeichnung bei Ihren Angeboten</span></li>
-      <li><svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#ff9f1c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:2px"><path d="M5 12.5 L10 17 L19 7"/></svg><span>Werbepaket: Sticker, Duftbäume, Schlüsselanhänger</span></li>
     </ul>
+    <div class="info" style="background:rgba(255,159,28,.1);border-color:rgba(255,159,28,.45);color:var(--text)"><span>🎁</span><span><b>Gründungspartner-Bonus:</b> Wer noch in der Pilotphase (bis 31.05.2027) zu Pro wechselt, erhält ein <b>Werbepaket gratis</b> – Sticker, Duftbäume und Schlüsselanhänger.</span></div>
+    <p class="hint" style="margin:10px 0 0">Weiteres Werbematerial mit AbschleppRadar-Design erhalten Sie exklusiv über uns.</p>
   </div>
 
   <h3>Jetzt mitmachen</h3>
@@ -1453,7 +1454,7 @@ async function setApproved(id, ok, btn){
 $("abrMonat").onchange = loadAbr;
 $("abrPreis").oninput = () => { store.set("ar_preis", $("abrPreis").value); renderAbr(); };
 async function loadAbr(){
-  try{ const { data:kb } = await sb.rpc("admin_kostenlos_bis"); if(kb){ const d=new Date(kb); $("abrFrei").style.display = d>Date.now() ? "flex" : "none"; $("abrFrei").innerHTML=`<span>🎁</span><span>Gratisphase: Für alle Firmen kostenlos bis <b>${d.toLocaleDateString("de-DE")}</b>, Werkstätten bis <b>01.12.2027</b>. Pro-Partner (9,90 €/Monat) zahlen keine Auftragsgebühr. Diese Aufträge erscheinen hier als „nicht berechnet“.</span>`; } }catch(e){}
+  try{ const { data:kb } = await sb.rpc("admin_kostenlos_bis"); if(kb){ const d=new Date(kb); $("abrFrei").style.display = d>Date.now() ? "flex" : "none"; $("abrFrei").innerHTML=`<span>🎁</span><span>Gratisphase: Für alle Firmen kostenlos bis <b>${d.toLocaleDateString("de-DE")}</b>, Werkstätten bis <b>01.12.2027</b>. Pro-Partner (19,99 €/Monat inkl. MwSt.) zahlen keine Auftragsgebühr. Diese Aufträge erscheinen hier als „nicht berechnet“.</span>`; } }catch(e){}
   $("abrOut").innerHTML=`<div class="empty">Lädt …</div>`;
   const r=monthRange($("abrMonat").value);
   const { data, error } = await sb.rpc("admin_abrechnung", { p_von:r.von, p_bis:r.bis });
