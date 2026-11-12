@@ -542,8 +542,7 @@ footer a{color:var(--muted)}
 
   <h3>Konditionen in der Pilotphase</h3>
   <div class="card pwcond">
-    <div><b>Abschleppdienste, Reifenservice, Aufbereitung</b><span><b class="pwfree">6 Monate kostenlos</b> – bis 31.05.2027. Danach zahlen Sie nur für vermittelte Aufträge (bzw. für den Verzeichnis-Eintrag) – keine Grundgebühr.</span></div>
-    <div><b>Werkstätten</b><span><b class="pwfree">1 Jahr kostenlos</b> – bis 30.11.2027.</span></div>
+    <div><b>Abschleppdienste, Werkstätten, Reifenservice, Aufbereitung</b><span><b class="pwfree">6 Monate kostenlos</b> – bis 31.05.2027. Danach zahlen Sie nur für vermittelte Aufträge (bzw. für den Verzeichnis-Eintrag) – keine Grundgebühr.</span></div>
     <div><b>Kfz-Gutachter</b><span>Konditionen auf Anfrage – sprechen Sie uns an.</span></div>
   </div>
   <div class="card pwpro">
@@ -1468,7 +1467,7 @@ async function setApproved(id, ok, btn){
 $("abrMonat").onchange = loadAbr;
 $("abrPreis").oninput = () => { store.set("ar_preis", $("abrPreis").value); renderAbr(); };
 async function loadAbr(){
-  try{ const { data:kb } = await sb.rpc("admin_kostenlos_bis"); if(kb){ const d=new Date(kb); $("abrFrei").style.display = d>Date.now() ? "flex" : "none"; $("abrFrei").innerHTML=`<span>🎁</span><span>Gratisphase: Für alle Firmen kostenlos bis <b>${d.toLocaleDateString("de-DE")}</b>, Werkstätten bis <b>01.12.2027</b>. Pro-Partner (19,99 €/Monat inkl. MwSt.) zahlen keine Auftragsgebühr. Diese Aufträge erscheinen hier als „nicht berechnet“.</span>`; } }catch(e){}
+  try{ const { data:kb } = await sb.rpc("admin_kostenlos_bis"); if(kb){ const d=new Date(kb); $("abrFrei").style.display = d>Date.now() ? "flex" : "none"; $("abrFrei").innerHTML=`<span>🎁</span><span>Gratisphase: Für alle Firmen kostenlos bis <b>${d.toLocaleDateString("de-DE")}</b>. Pro-Partner (19,99 €/Monat inkl. MwSt.) zahlen keine Auftragsgebühr. Diese Aufträge erscheinen hier als „nicht berechnet“.</span>`; } }catch(e){}
   $("abrOut").innerHTML=`<div class="empty">Lädt …</div>`;
   const r=monthRange($("abrMonat").value);
   const { data, error } = await sb.rpc("admin_abrechnung", { p_von:r.von, p_bis:r.bis });
