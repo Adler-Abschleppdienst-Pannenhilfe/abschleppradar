@@ -361,6 +361,7 @@ footer a{color:var(--muted)}
 <!-- ADMIN -->
 <section class="view" id="v-admin">
   <h2>Admin</h2>
+  <div class="card" id="admStats" style="margin-bottom:12px">Lädt …</div>
   <div class="seg" id="adminSeg"><button type="button" data-v="drivers" class="on">Abschlepper</button><button type="button" data-v="abr">Abrechnung</button><button type="button" data-v="log">Protokoll</button><button type="button" data-v="partner">Partner</button></div>
 
   <div id="adm-partner" style="display:none;margin-top:14px">
@@ -566,6 +567,9 @@ footer a{color:var(--muted)}
   <h4>9. Programmbibliotheken (CDN)</h4>
   <p>Zur Darstellung der Karte und zur Verbindung mit der Datenbank laden wir Programmbibliotheken von den Diensten unpkg.com und cdn.jsdelivr.net. Dabei wird Ihre IP-Adresse an den jeweiligen Anbieter übermittelt. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an einer zuverlässigen technischen Bereitstellung).</p>
 
+  <h4>Anzahl der Partnerbetriebe</h4>
+  <p>Unten auf der Seite zeigen wir, wie viele Partnerbetriebe es gibt. Wenn Sie dort auf „in Ihrer Nähe?“ tippen oder Ihrem Browser den Standortzugriff bereits erlaubt haben, wird Ihr ungefährer Standort einmalig an unsere Datenbank (Supabase, s. oben) übermittelt, um die Betriebe im Umkreis von 100 km zu zählen. Der Standort wird dabei nicht gespeichert. Um zu sehen, wie viele Besucher gerade die Seite geöffnet haben, baut Ihr Browser eine technische Verbindung zu Supabase auf; dabei wird nur eine zufällige, nicht personenbezogene Kennung verwendet und nichts gespeichert. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an einer informativen und stabilen Plattform).</p>
+
   <h4>Partner-Verzeichnis (Gutachter, Werkstätten u. a.)</h4>
   <p>Im Verzeichnis zeigen wir Geschäftsangaben von Partnerunternehmen (Name, Adresse, Telefon, E-Mail, Website, Beschreibung, Standort, ob Kunden ohne Termin kommen können), die mit Zustimmung der Inhaber eingetragen wurden (Art. 6 Abs. 1 lit. a DSGVO). Partner können ihren Eintrag jederzeit über die oben genannten Kontaktdaten ändern oder löschen lassen. Wenn Sie im Verzeichnis „Mein Standort“ antippen, wird Ihr Standort nur in Ihrem Browser zur Sortierung verwendet und nicht gespeichert.</p>
 
@@ -580,6 +584,8 @@ footer a{color:var(--muted)}
 </main>
 
 <footer>
+  <div id="pzBox" style="display:none;margin-bottom:6px"><button type="button" class="linkbtn" id="pzBtn" style="color:var(--text);text-decoration:none;font-size:13px" onclick="pzClick()"></button></div>
+  <div id="pzAdm" class="hint" style="display:none;margin:0 0 6px"></div>
   AbschleppRadar · ein Service von <a href="https://www.autotransportadler.com" target="_blank" rel="noopener">Auto Transport Adler</a><br>
   <a href="#impressum">Impressum</a> · <a href="#datenschutz">Datenschutz</a> · <a href="#kontakt">Kontakt</a> · Karten © OpenStreetMap-Mitwirkende
 </footer>
@@ -1331,7 +1337,7 @@ async function openAdmin(){
   if(!user){ const { data:{ session } } = await sb.auth.getSession(); if(!session) return go("login"); user=session.user; }
   if(!isAdmin){ try{ const { data } = await sb.rpc("is_admin"); isAdmin=!!data; }catch(e){} }
   if(!isAdmin){ toast("Kein Admin-Zugriff"); return; }
-  go("admin"); adminTab(admTab);
+  go("admin"); adminTab(admTab); pzLoad();
 }
 $("adminSeg").onclick = e => { const b=e.target.closest("button"); if(b) adminTab(b.dataset.v); };
 function adminTab(t){
@@ -1656,6 +1662,53 @@ async function pkDelete(id,btn){
   const { error } = await sb.from("partners").delete().eq("id", id); if(error) return toast(errText(error));
   toast("Partner gelöscht"); if(pkEdit===id) pkReset(); loadAdmPartners();
 }
+
+// ================= Partner-Zähler =================
+let pzData=null, pzPos=null, pzShowNah=true, pzVisitors=null;
+const pzN = x => Number(x).toLocaleString("de-DE");
+async function pzLoad(){
+  try{
+    const { data, error } = await sb.rpc("partner_counts", { p_lat: pzPos?pzPos[0]:null, p_lng: pzPos?pzPos[1]:null, p_km:100 });
+    if(error) throw error;
+    pzData=data||{}; pzRender();
+  }catch(e){ $("pzBox").style.display="none"; }
+}
+function pzRender(){
+  const d=pzData||{}, box=$("pzBox"), b=$("pzBtn");
+  if(d.nah!=null && pzShowNah){ b.innerHTML=`🤝 <b>${pzN(d.nah)}</b> Partnerbetriebe im Umkreis von 100 km <span style="color:var(--muted)">· alle anzeigen</span>`; box.style.display="block"; }
+  else if(d.gesamt!=null){ b.innerHTML=`🤝 <b>${pzN(d.gesamt)}</b> Partnerbetriebe deutschlandweit`+(d.nah!=null?` <span style="color:var(--muted)">· in Ihrer Nähe</span>`:(!pzPos?` <span style="color:var(--muted)">· 📍 in Ihrer Nähe?</span>`:"")); box.style.display="block"; }
+  else box.style.display="none";
+  const adm = d.admin===true;
+  const besucher = pzVisitors!=null ? pzN(pzVisitors) : "…";
+  $("pzAdm").style.display = adm ? "block" : "none";
+  if(adm) $("pzAdm").innerHTML = `Admin: 🟢 ${pzN(d.online)} online · ${pzN(d.gesamt)} Partner gesamt · 👀 ${besucher} Besucher jetzt`;
+  if(adm) $("admStats").innerHTML = `<div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between">
+    <div><div class="hint" style="margin:0">🟢 Partner online</div><b style="font-size:22px">${pzN(d.online)}</b></div>
+    <div><div class="hint" style="margin:0">🤝 Partner gesamt</div><b style="font-size:22px">${pzN(d.gesamt)}</b></div>
+    <div><div class="hint" style="margin:0">👀 Besucher jetzt</div><b style="font-size:22px">${besucher}</b></div></div>
+    <div class="hint" style="margin:8px 0 0">Abschlepper ${pzN(d.abschlepper)} · Werkstätten ${pzN(d.werkstatt)} · Verzeichnis ${pzN(d.verzeichnis)}${d.nah!=null?` · im Umkreis 100 km: ${pzN(d.nah)}`:""} · Kunden sehen die Zahl erst ab 25.</div>`;
+}
+async function pzClick(){
+  const d=pzData||{};
+  if(!pzPos){
+    $("pzBtn").textContent="Standort wird ermittelt …";
+    try{ const p=await getPos({ enableHighAccuracy:false, timeout:10000, maximumAge:600000 }); pzPos=[p.coords.latitude,p.coords.longitude]; pzShowNah=true; await pzLoad(); }
+    catch(e){ toast("Standort nicht verfügbar"); pzRender(); }
+    return;
+  }
+  if(d.nah!=null){ pzShowNah=!pzShowNah; pzRender(); }
+}
+// Standort nur ohne Nachfrage nutzen, wenn der Browser ihn schon erlaubt hat
+try{ navigator.permissions && navigator.permissions.query({ name:"geolocation" }).then(r=>{ if(r.state==="granted") getPos({ enableHighAccuracy:false, timeout:10000, maximumAge:600000 }).then(p=>{ pzPos=[p.coords.latitude,p.coords.longitude]; pzLoad(); }).catch(()=>{}); }).catch(()=>{}); }catch(e){}
+// Besucher gerade auf der Seite (Realtime Presence, zufällige Kennung)
+try{
+  const pzKey = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2));
+  const pzChan = sb.channel("besucher", { config:{ presence:{ key:pzKey } } });
+  pzChan.on("presence", { event:"sync" }, ()=>{ pzVisitors=Object.keys(pzChan.presenceState()).length; if(pzData && pzData.admin) pzRender(); })
+        .subscribe(async st=>{ if(st==="SUBSCRIBED") await pzChan.track({ t:Date.now() }); });
+}catch(e){}
+pzLoad(); setInterval(pzLoad, 120000);
+sb.auth.onAuthStateChange(evt=>{ if(evt==="SIGNED_IN"||evt==="SIGNED_OUT") setTimeout(pzLoad, 500); });
 
 // ================= Start =================
 if(store.get("ar_last")) $("lastReqBtn").style.display="block";
