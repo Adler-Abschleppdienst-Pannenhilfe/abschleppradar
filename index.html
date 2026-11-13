@@ -549,7 +549,7 @@ footer a{color:var(--muted)}
 
   <h3>Konditionen in der Pilotphase</h3>
   <div class="card pwcond">
-    <div><b>Abschleppdienste, Werkstätten, Reifenservice, Aufbereitung</b><span><b class="pwfree">6 Monate kostenlos</b> – ab Ihrer Anmeldung. Danach zahlen Sie nur für vermittelte Aufträge (bzw. für den Verzeichnis-Eintrag) – keine Grundgebühr. Die Höhe legen wir vor dem Ende Ihrer Gratisphase fest – Sie entscheiden dann frei, ob Sie weitermachen.</span></div>
+    <div><b>Abschleppdienste, Werkstätten, Reifenservice, Aufbereitung</b><span><b class="pwfree">6 Monate kostenlos</b> – Ihre 6 Monate starten am 01.12.2026, bei späterer Anmeldung mit Ihrer Anmeldung. Wer sich jetzt schon anmeldet, verliert also keinen Tag. Danach zahlen Sie nur für vermittelte Aufträge (bzw. für den Verzeichnis-Eintrag) – keine Grundgebühr. Die Höhe legen wir vor dem Ende Ihrer Gratisphase fest – Sie entscheiden dann frei, ob Sie weitermachen.</span></div>
     <div><b>Kfz-Gutachter</b><span>Konditionen auf Anfrage – sprechen Sie uns an.</span></div>
     <div><b>Kein Abo</b><span>Die Partnerschaft selbst hat keine Vertragsbindung – Sie können jederzeit aufhören. Nur das freiwillige Pro-Paket hat 3 Monate Mindestlaufzeit.</span></div>
     <div><b>Für Ihre Kunden kostenlos</b><span>Kunden zahlen keine Gebühr an AbschleppRadar – sie zahlen nur Ihren Preis für die Leistung.</span></div>
@@ -1487,7 +1487,7 @@ async function setApproved(id, ok, btn){
 $("abrMonat").onchange = loadAbr;
 $("abrPreis").oninput = () => { store.set("ar_preis", $("abrPreis").value); renderAbr(); };
 async function loadAbr(){
-  $("abrFrei").style.display="flex"; $("abrFrei").innerHTML=`<span>🎁</span><span>Gratisphase: Jede Firma zahlt die ersten <b>6 Monate ab ihrer Registrierung</b> keine Auftragsgebühr. Pro-Partner (19,90 €/Monat inkl. MwSt.) zahlen nie eine Auftragsgebühr. Diese Aufträge erscheinen hier als „nicht berechnet“.</span>`;
+  $("abrFrei").style.display="flex"; $("abrFrei").innerHTML=`<span>🎁</span><span>Gratisphase: Jede Firma zahlt 6 Monate keine Auftragsgebühr – gerechnet ab dem Start 01.12.2026 bzw. ab ihrer Registrierung, wenn diese später liegt. Pro-Partner (19,90 €/Monat inkl. MwSt.) zahlen nie eine Auftragsgebühr. Diese Aufträge erscheinen hier als „nicht berechnet“.</span>`;
   $("abrOut").innerHTML=`<div class="empty">Lädt …</div>`;
   const r=monthRange($("abrMonat").value);
   const { data, error } = await sb.rpc("admin_abrechnung", { p_von:r.von, p_bis:r.bis });
@@ -1626,7 +1626,7 @@ function waNumber(tel){ let d=String(tel||"").replace(/[^\d+]/g,""); if(d.starts
 function inviteLink(code){ return APP_BASE + "#einladung-" + code; }
 function inviteText(firma, typ, link){
   const ws = typ==="werkstatt";
-  return `Hallo ${firma},\n\nich lade Sie als Gründungspartner zu AbschleppRadar ein – ${ws?"Kundenanfragen für Reparaturen":"Abschlepp- und Pannenaufträge"} aus Ihrer Nähe direkt aufs Handy. Die ersten 6 Monate ab Ihrer Anmeldung sind kostenlos, kein Abo.\n\nBitte über diesen Link nur noch E-Mail und Passwort festlegen – Ihr Konto ist sofort freigeschaltet:\n${link}\n\nBei Fragen einfach anrufen: 0162 434 0038\n\nViele Grüße\nMurat Yildirim\nAbschleppRadar · abschleppradar.de`;
+  return `Hallo ${firma},\n\nich lade Sie als Gründungspartner zu AbschleppRadar ein – ${ws?"Kundenanfragen für Reparaturen":"Abschlepp- und Pannenaufträge"} aus Ihrer Nähe direkt aufs Handy. Die ersten 6 Monate sind kostenlos, kein Abo.\n\nBitte über diesen Link nur noch E-Mail und Passwort festlegen – Ihr Konto ist sofort freigeschaltet:\n${link}\n\nBei Fragen einfach anrufen: 0162 434 0038\n\nViele Grüße\nMurat Yildirim\nAbschleppRadar · abschleppradar.de`;
 }
 function inviteButtons(i){
   const link=inviteLink(i.code), text=inviteText(i.firma,i.typ,link), wa=waNumber(i.tel);
