@@ -549,7 +549,7 @@ footer a{color:var(--muted)}
 
   <h3>Konditionen in der Pilotphase</h3>
   <div class="card pwcond">
-    <div><b>Abschleppdienste, Werkstätten, Reifenservice, Aufbereitung</b><span><b class="pwfree">6 Monate kostenlos</b> – bis 31.05.2027. Danach zahlen Sie nur für vermittelte Aufträge (bzw. für den Verzeichnis-Eintrag) – keine Grundgebühr.</span></div>
+    <div><b>Abschleppdienste, Werkstätten, Reifenservice, Aufbereitung</b><span><b class="pwfree">6 Monate kostenlos</b> – ab Ihrer Anmeldung. Danach zahlen Sie nur für vermittelte Aufträge (bzw. für den Verzeichnis-Eintrag) – keine Grundgebühr.</span></div>
     <div><b>Kfz-Gutachter</b><span>Konditionen auf Anfrage – sprechen Sie uns an.</span></div>
   </div>
   <div class="card pwpro">
@@ -1474,7 +1474,7 @@ async function setApproved(id, ok, btn){
 $("abrMonat").onchange = loadAbr;
 $("abrPreis").oninput = () => { store.set("ar_preis", $("abrPreis").value); renderAbr(); };
 async function loadAbr(){
-  try{ const { data:kb } = await sb.rpc("admin_kostenlos_bis"); if(kb){ const d=new Date(kb); $("abrFrei").style.display = d>Date.now() ? "flex" : "none"; $("abrFrei").innerHTML=`<span>🎁</span><span>Gratisphase: Für alle Firmen kostenlos bis <b>${d.toLocaleDateString("de-DE")}</b>. Pro-Partner (19,90 €/Monat inkl. MwSt.) zahlen keine Auftragsgebühr. Diese Aufträge erscheinen hier als „nicht berechnet“.</span>`; } }catch(e){}
+  $("abrFrei").style.display="flex"; $("abrFrei").innerHTML=`<span>🎁</span><span>Gratisphase: Jede Firma zahlt die ersten <b>6 Monate ab ihrer Registrierung</b> keine Auftragsgebühr. Pro-Partner (19,90 €/Monat inkl. MwSt.) zahlen nie eine Auftragsgebühr. Diese Aufträge erscheinen hier als „nicht berechnet“.</span>`;
   $("abrOut").innerHTML=`<div class="empty">Lädt …</div>`;
   const r=monthRange($("abrMonat").value);
   const { data, error } = await sb.rpc("admin_abrechnung", { p_von:r.von, p_bis:r.bis });
@@ -1613,7 +1613,7 @@ function waNumber(tel){ let d=String(tel||"").replace(/[^\d+]/g,""); if(d.starts
 function inviteLink(code){ return APP_BASE + "#einladung-" + code; }
 function inviteText(firma, typ, link){
   const ws = typ==="werkstatt";
-  return `Hallo ${firma},\n\nich lade Sie als Gründungspartner zu AbschleppRadar ein – ${ws?"Kundenanfragen für Reparaturen":"Abschlepp- und Pannenaufträge"} aus Ihrer Nähe direkt aufs Handy. ${ws?"Im ersten Jahr ist alles kostenlos.":"Die ersten 6 Monate sind kostenlos, kein Abo."}\n\nBitte über diesen Link nur noch E-Mail und Passwort festlegen – Ihr Konto ist sofort freigeschaltet:\n${link}\n\nBei Fragen einfach anrufen: 0162 434 0038\n\nViele Grüße\nMurat Yildirim\nAbschleppRadar · abschleppradar.de`;
+  return `Hallo ${firma},\n\nich lade Sie als Gründungspartner zu AbschleppRadar ein – ${ws?"Kundenanfragen für Reparaturen":"Abschlepp- und Pannenaufträge"} aus Ihrer Nähe direkt aufs Handy. Die ersten 6 Monate ab Ihrer Anmeldung sind kostenlos, kein Abo.\n\nBitte über diesen Link nur noch E-Mail und Passwort festlegen – Ihr Konto ist sofort freigeschaltet:\n${link}\n\nBei Fragen einfach anrufen: 0162 434 0038\n\nViele Grüße\nMurat Yildirim\nAbschleppRadar · abschleppradar.de`;
 }
 function inviteButtons(i){
   const link=inviteLink(i.code), text=inviteText(i.firma,i.typ,link), wa=waNumber(i.tel);
