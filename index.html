@@ -382,16 +382,21 @@ footer a{color:var(--muted)}
 
   <div id="adm-qr" style="display:none;margin-top:14px">
     <div class="card">
-      <b>🔳 QR-Codes zuweisen</b>
-      <p class="hint" style="margin:6px 0 4px">Vorgedruckte Codes (Sticker, Duftbäume) einer Firma zuordnen. Wer scannt, landet bei „Hilfe anfordern“ – die Anfrage geht zuerst an diese Firma (nur Pro-Firmen). Freie Codes führen zur normalen Hilfe-Seite.</p>
-      <div class="row"><div><label for="qrVon">Von Nr.</label><input id="qrVon" type="number" min="1" inputmode="numeric" placeholder="1"></div><div><label for="qrBis">Bis Nr.</label><input id="qrBis" type="number" min="1" inputmode="numeric" placeholder="10"></div></div>
-      <label for="qrFirma">Firma</label><select id="qrFirma"><option value="">— frei (keine Firma) —</option></select>
-      <button class="btn small" onclick="qrAssign(this)">Zuweisen</button>
+      <b>🔳 QR-Paket zuweisen</b>
+      <p class="hint" style="margin:6px 0 4px">Jede Firma bekommt ein Paket aus 3 Codes: <b>1 = Duftbaum</b>, <b>2 = Sticker klein</b>, <b>3 = Sticker groß</b>. Es wird immer das nächste freie Paket vergeben – ohne Lücken. Wer scannt, landet bei „Hilfe anfordern“, die Anfrage geht zuerst an diese Firma (nur Pro-Firmen).</p>
+      <div class="info" id="qrNext" style="margin:8px 0 0">Lädt …</div>
+      <label for="qrFirma">Firma</label><select id="qrFirma"><option value="">— Firma wählen —</option></select>
+      <button class="btn small" onclick="qrAssignNext(this)">Nächstes Paket zuweisen</button>
       <div class="msg" id="qrMsg"></div>
+      <details style="margin-top:12px"><summary class="hint" style="cursor:pointer">Manuell (Von/Bis) – z. B. Paket freigeben oder umhängen</summary>
+        <div class="row"><div><label for="qrVon">Von Nr.</label><input id="qrVon" type="number" min="1" inputmode="numeric" placeholder="1"></div><div><label for="qrBis">Bis Nr.</label><input id="qrBis" type="number" min="1" inputmode="numeric" placeholder="3"></div></div>
+        <label for="qrFirmaM">Firma</label><select id="qrFirmaM"><option value="">— frei (keine Firma) —</option></select>
+        <button class="btn ghost small" onclick="qrAssign(this)">Übernehmen</button>
+      </details>
     </div>
     <div id="qrList" style="margin-top:12px"></div>
     <button class="btn ghost small" onclick="qrExport(this)">📥 Excel-Liste herunterladen</button>
-    <button class="btn ghost small" onclick="qrAdd(this)">➕ 50 neue Codes anlegen</button>
+    <button class="btn ghost small" onclick="qrAdd(this)">➕ 17 neue Pakete anlegen (51 Codes)</button>
   </div>
 
   <div id="adm-partner" style="display:none;margin-top:14px">
@@ -1792,26 +1797,51 @@ async function openQr(code){
   go("kunde");
   try{ const { data } = await sb.rpc("qr_resolve", { p_code:code }); if(data) setPrefFirma(data); }catch(e){}
 }
+const QR_ART=["Duftbaum","Sticker klein","Sticker groß"];
+const qrNr=n=>"q"+String(n).padStart(4,"0");
+let qrRows=[], qrNextGrp=null;
 async function loadQr(){
   $("qrList").innerHTML=`<div class="empty">Lädt …</div>`;
   const [q, d] = await Promise.all([ sb.rpc("admin_qr_list"), sb.rpc("admin_drivers") ]);
-  if(q.error){ $("qrList").innerHTML=`<div class="msg err">${esc(errText(q.error))}</div>`; return; }
-  const sel=$("qrFirma"), keep=sel.value;
-  sel.innerHTML=`<option value="">— frei (keine Firma) —</option>` + (d.data||[]).filter(x=>x.approved).sort((a,b)=>(b.pro-a.pro)||String(a.firma).localeCompare(b.firma))
-    .map(x=>`<option value="${esc(x.id)}">${x.pro?"⭐ ":""}${esc(x.firma)}${x.pro?"":" (kein Pro)"}</option>`).join("");
-  sel.value=keep;
-  const rows=q.data||[]; const groups=[];
-  rows.forEach(r=>{ const g=groups[groups.length-1]; if(g && g.driver_id===r.driver_id && g.bis===r.nr-1){ g.bis=r.nr; g.scans+=r.scans; if(r.last_scan&&(!g.last||r.last_scan>g.last)) g.last=r.last_scan; } else groups.push({ von:r.nr, bis:r.nr, driver_id:r.driver_id, firma:r.firma, pro:r.pro, scans:r.scans, last:r.last_scan }); });
-  const frei=rows.filter(r=>!r.driver_id).length, sum=rows.reduce((a,r)=>a+r.scans,0);
-  const nr=n=>"q"+String(n).padStart(4,"0");
-  $("qrList").innerHTML=`<div class="hint" style="margin:0 0 8px">${rows.length} Codes · ${frei} frei · ${sum} Scans gesamt</div>`+groups.map(g=>`<div class="card" style="margin-bottom:8px;${g.driver_id?"":"opacity:.7"}">
-    <div style="display:flex;justify-content:space-between;gap:10px"><div><b>${nr(g.von)}${g.bis>g.von?" – "+nr(g.bis):""}</b> <span class="hint">(${g.bis-g.von+1} Stück)</span>
-    <div class="hint">${g.driver_id?`${g.pro?"⭐ ":""}${esc(g.firma||"?")}${g.pro?"":" – kein Pro, Code führt zur normalen Seite"}`:"frei"}</div></div>
-    <div style="text-align:right;flex:none"><b>${g.scans}</b><div class="hint" style="margin:0">Scans${g.last?" · zuletzt "+ago(g.last):""}</div></div></div></div>`).join("");
+  if(q.error){ $("qrList").innerHTML=`<div class="msg err">${esc(errText(q.error))}</div>`; $("qrNext").textContent=""; return; }
+  const firms=(d.data||[]).filter(x=>x.approved).sort((a,b)=>(b.pro-a.pro)||String(a.firma).localeCompare(b.firma));
+  const opts=firms.map(x=>`<option value="${esc(x.id)}">${x.pro?"⭐ ":""}${esc(x.firma)}${x.pro?"":" (kein Pro)"}</option>`).join("");
+  const k1=$("qrFirma").value, k2=$("qrFirmaM").value;
+  $("qrFirma").innerHTML=`<option value="">— Firma wählen —</option>`+opts; $("qrFirma").value=k1;
+  $("qrFirmaM").innerHTML=`<option value="">— frei (keine Firma) —</option>`+opts; $("qrFirmaM").value=k2;
+  qrRows=q.data||[];
+  const byNr={}; qrRows.forEach(r=>byNr[r.nr]=r);
+  const maxNr=qrRows.reduce((m,r)=>Math.max(m,r.nr),0), pakete=Math.floor(maxNr/3);
+  const groups=[]; let frei=0; qrNextGrp=null;
+  for(let g=1; g<=pakete; g++){
+    const rs=[byNr[g*3-2],byNr[g*3-1],byNr[g*3]];
+    if(rs.some(r=>!r)) continue;
+    const free=rs.every(r=>!r.driver_id);
+    if(free){ frei++; if(!qrNextGrp) qrNextGrp=g; }
+    groups.push({ g, rs, free });
+  }
+  $("qrNext").innerHTML = qrNextGrp ? `<span>➡️</span><span>Nächstes freies Paket: <b>Nr. ${qrNextGrp}</b> (${qrNr(qrNextGrp*3-2)} – ${qrNr(qrNextGrp*3)}) · noch ${frei} frei</span>` : `<span>⚠️</span><span>Keine freien Pakete mehr – unten neue anlegen.</span>`;
+  const sum=qrRows.reduce((a,r)=>a+r.scans,0);
+  const used=groups.filter(x=>!x.free), freeCnt=groups.length-used.length;
+  $("qrList").innerHTML=`<div class="hint" style="margin:0 0 8px">${groups.length} Pakete · ${used.length} vergeben · ${freeCnt} frei · ${sum} Scans gesamt</div>`
+    + used.map(x=>{ const r0=x.rs.find(r=>r.driver_id)||x.rs[0]; const mixed=x.rs.some(r=>r.driver_id!==r0.driver_id);
+      return `<div class="card" style="margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline"><b>Paket ${x.g} · ${r0.pro?"⭐ ":""}${esc(r0.firma||"?")}</b><span class="hint" style="margin:0">${qrNr(x.g*3-2)}–${qrNr(x.g*3)}</span></div>
+      ${r0.pro?"":`<div class="hint" style="margin:2px 0 0">kein Pro – Codes führen zur normalen Seite</div>`}${mixed?`<div class="hint" style="margin:2px 0 0;color:var(--accent)">⚠️ Codes in diesem Paket gehören verschiedenen Firmen</div>`:""}
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:8px">${x.rs.map((r,i)=>`<div style="background:var(--panel2);border-radius:10px;padding:8px;text-align:center"><div class="hint" style="margin:0">${QR_ART[i]}</div><b style="font-size:18px">${r.scans}</b><div class="hint" style="margin:0">${r.last_scan?ago(r.last_scan):"noch kein Scan"}</div></div>`).join("")}</div></div>`; }).join("")
+    + (freeCnt?`<div class="hint" style="margin:4px 0 10px">${freeCnt} freie Pakete (ab Nr. ${qrNextGrp||"–"})</div>`:"");
+}
+async function qrAssignNext(btn){
+  const drv=$("qrFirma").value; if(!drv) return msg("qrMsg","Bitte zuerst eine Firma wählen.");
+  if(!qrNextGrp) return msg("qrMsg","Keine freien Pakete – bitte neue anlegen.");
+  const g=qrNextGrp; btn.disabled=true;
+  const { error } = await sb.rpc("admin_qr_assign", { p_von:g*3-2, p_bis:g*3, p_driver:drv }); btn.disabled=false;
+  if(error) return msg("qrMsg", errText(error));
+  msg("qrMsg", `Paket ${g} (${qrNr(g*3-2)}–${qrNr(g*3)}) zugewiesen: ${qrNr(g*3-2)} = Duftbaum, ${qrNr(g*3-1)} = Sticker klein, ${qrNr(g*3)} = Sticker groß.`, true); loadQr();
 }
 async function qrAssign(btn){
-  const von=parseInt($("qrVon").value,10), bis=parseInt($("qrBis").value||$("qrVon").value,10), drv=$("qrFirma").value||null;
-  if(!von||!bis||bis<von) return msg("qrMsg","Bitte gültige Nummern eingeben (z. B. 1 bis 10).");
+  const von=parseInt($("qrVon").value,10), bis=parseInt($("qrBis").value||$("qrVon").value,10), drv=$("qrFirmaM").value||null;
+  if(!von||!bis||bis<von) return msg("qrMsg","Bitte gültige Nummern eingeben (z. B. 4 bis 6).");
   btn.disabled=true; const { data, error } = await sb.rpc("admin_qr_assign", { p_von:von, p_bis:bis, p_driver:drv }); btn.disabled=false;
   if(error) return msg("qrMsg", errText(error));
   msg("qrMsg", `${data} Code(s) ${drv?"zugewiesen":"freigegeben"}.`, true); loadQr();
@@ -1821,16 +1851,17 @@ async function qrExport(btn){
   if(error) return toast(errText(error));
   const f=d=>d?new Date(d).toLocaleString("de-DE"):"";
   const q=v=>'"'+String(v??"").replace(/"/g,'""')+'"';
-  const rows=[["Nr","Code","Link","Firma","Pro","Zugewiesen am","Scans","Letzter Scan"]]
-    .concat((data||[]).map(r=>[r.nr,r.code,"https://abschleppradar.de/#"+r.code,r.firma||"frei",r.driver_id?(r.pro?"ja":"nein"):"",f(r.assigned_at),r.scans,f(r.last_scan)]));
+  const rows=[["Paket","Nr","Code","Material","Link","Firma","Pro","Zugewiesen am","Scans","Letzter Scan"]]
+    .concat((data||[]).map(r=>[Math.ceil(r.nr/3),r.nr,r.code,QR_ART[(r.nr-1)%3],"https://abschleppradar.de/#"+r.code,r.firma||"frei",r.driver_id?(r.pro?"ja":"nein"):"",f(r.assigned_at),r.scans,f(r.last_scan)]));
   const csv="\ufeff"+rows.map(r=>r.map(q).join(";")).join("\r\n");
   const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
   a.download="AbschleppRadar-QR-Codes-"+new Date().toISOString().slice(0,10)+".csv"; document.body.appendChild(a); a.click(); a.remove();
 }
 async function qrAdd(btn){
-  if(!confirmTwice(btn,"Wirklich 50 neue Codes anlegen?")) return;
-  btn.disabled=true; const { data, error } = await sb.rpc("admin_qr_add", { p_anzahl:50 }); btn.disabled=false; btn.textContent="➕ 50 neue Codes anlegen";
-  if(error) return toast(errText(error)); toast("Neue Codes bis q"+String(data).padStart(4,"0")+" angelegt"); loadQr();
+  if(!confirmTwice(btn,"Wirklich 17 neue Pakete anlegen?")) return;
+  const maxNr=qrRows.reduce((m,r)=>Math.max(m,r.nr),0), n=51+((3-maxNr%3)%3);
+  btn.disabled=true; const { data, error } = await sb.rpc("admin_qr_add", { p_anzahl:n }); btn.disabled=false; btn.textContent="➕ 17 neue Pakete anlegen (51 Codes)";
+  if(error) return toast(errText(error)); toast("Neue Codes bis "+qrNr(data)+" angelegt"); loadQr();
 }
 
 // ================= Start =================
