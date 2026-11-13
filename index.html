@@ -390,6 +390,7 @@ footer a{color:var(--muted)}
       <div class="msg" id="qrMsg"></div>
     </div>
     <div id="qrList" style="margin-top:12px"></div>
+    <button class="btn ghost small" onclick="qrExport(this)">📥 Excel-Liste herunterladen</button>
     <button class="btn ghost small" onclick="qrAdd(this)">➕ 50 neue Codes anlegen</button>
   </div>
 
@@ -1814,6 +1815,17 @@ async function qrAssign(btn){
   btn.disabled=true; const { data, error } = await sb.rpc("admin_qr_assign", { p_von:von, p_bis:bis, p_driver:drv }); btn.disabled=false;
   if(error) return msg("qrMsg", errText(error));
   msg("qrMsg", `${data} Code(s) ${drv?"zugewiesen":"freigegeben"}.`, true); loadQr();
+}
+async function qrExport(btn){
+  btn.disabled=true; const { data, error } = await sb.rpc("admin_qr_list"); btn.disabled=false;
+  if(error) return toast(errText(error));
+  const f=d=>d?new Date(d).toLocaleString("de-DE"):"";
+  const q=v=>'"'+String(v??"").replace(/"/g,'""')+'"';
+  const rows=[["Nr","Code","Link","Firma","Pro","Zugewiesen am","Scans","Letzter Scan"]]
+    .concat((data||[]).map(r=>[r.nr,r.code,"https://abschleppradar.de/#"+r.code,r.firma||"frei",r.driver_id?(r.pro?"ja":"nein"):"",f(r.assigned_at),r.scans,f(r.last_scan)]));
+  const csv="\ufeff"+rows.map(r=>r.map(q).join(";")).join("\r\n");
+  const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
+  a.download="AbschleppRadar-QR-Codes-"+new Date().toISOString().slice(0,10)+".csv"; document.body.appendChild(a); a.click(); a.remove();
 }
 async function qrAdd(btn){
   if(!confirmTwice(btn,"Wirklich 50 neue Codes anlegen?")) return;
