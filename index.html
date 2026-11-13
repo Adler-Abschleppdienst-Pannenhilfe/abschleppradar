@@ -967,10 +967,15 @@ async function refreshStatus(){
     $("okText").textContent = a.length ? "Wählen Sie ein Angebot. Alle Preise inkl. MwSt. Weitere Angebote erscheinen hier automatisch." : "Abschlepper in Ihrer Nähe wurden benachrichtigt und können jetzt Angebote abgeben. Neue Angebote erscheinen hier automatisch – Sie müssen die Seite nicht neu laden.";
     $("okOffers").innerHTML = a.map(o=>`<div class="card" style="margin-top:10px"><div style="display:flex;justify-content:space-between;gap:12px;align-items:center"><div><b>${esc(o.firma)}</b>${starLbl(o.sterne)}${o.notiz?`<div class="hint">${esc(o.notiz)}</div>`:""}</div><div style="text-align:right;flex:none"><b style="font-size:20px">${euro(o.preis)}</b><div class="hint">inkl. MwSt.</div></div></div><button class="btn small" onclick="chooseOffer(${o.id},this)">Dieses Angebot annehmen</button></div>`).join("");
   }
-  else if(s==="neu"){ $("okTitle").textContent=`Anfrage Nr. ${data.nr} gesendet`;
-    $("okText").textContent = data.exklusiv_firma
-      ? `Ihre Anfrage liegt gerade bei ${data.exklusiv_firma}. Falls dort niemand innerhalb weniger Minuten annimmt, geht sie automatisch an weitere Abschlepper in Ihrer Nähe.`
-      : "Abschlepper in Ihrer Nähe wurden benachrichtigt. Bitte bleiben Sie erreichbar – sobald jemand annimmt, sehen Sie hier Firma, Festpreis und Ankunftszeit."; }
+  else if(s==="neu"){
+    const a=data.angebote||[];
+    $("okTitle").textContent = a.length ? `${a.length} Angebot${a.length>1?"e":""} für Anfrage Nr. ${data.nr}` : `Anfrage Nr. ${data.nr} gesendet`;
+    $("okText").textContent = a.length
+      ? "Wählen Sie ein Angebot. Erst dann erhält die Firma Ihre Kontaktdaten. Alle Preise inkl. MwSt. – weitere Angebote erscheinen hier automatisch."
+      : (data.exklusiv_firma
+        ? `Ihre Anfrage liegt gerade bei ${data.exklusiv_firma}. Falls von dort innerhalb weniger Minuten kein Angebot kommt, geht sie automatisch an weitere Abschlepper in Ihrer Nähe.`
+        : "Abschlepper in Ihrer Nähe wurden benachrichtigt. Ihre Angebote mit Festpreis und Ankunftszeit erscheinen hier automatisch – Sie müssen die Seite nicht neu laden.");
+    $("okOffers").innerHTML = a.map(o=>`<div class="card" style="margin-top:10px"><div style="display:flex;justify-content:space-between;gap:12px;align-items:center"><div><b>${esc(o.firma)}</b>${starLbl(o.sterne)}${o.eta_min?`<div class="hint" style="margin:2px 0 0">🚛 Ankunft in ca. ${o.eta_min} Min.</div>`:""}${o.notiz?`<div class="hint">${esc(o.notiz)}</div>`:""}</div><div style="text-align:right;flex:none"><b style="font-size:20px">${euro(o.preis)}</b><div class="hint">Festpreis inkl. MwSt.</div></div></div><button class="btn small" onclick="chooseOffer(${o.id},this)">Dieses Angebot annehmen</button></div>`).join(""); }
   else if(s==="angenommen"){
     let eta="";
     if(data.wann==="sofort" && data.eta_min && data.accepted_at){ const t=new Date(new Date(data.accepted_at).getTime()+data.eta_min*60000); const rest=Math.round((t-Date.now())/60000); eta = `<div><span>Ankunft ca.</span><span><b>${t.toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})} Uhr</b>${rest>0?` (in ${rest} Min.)`:""}</span></div>`; }
@@ -1288,11 +1293,13 @@ async function openReq(id){
   const priceRows = mine && r.preis!=null ? `<div><span>${isWS(r)?"Ihre Schätzung":"Vereinbarter Preis"}</span><span><b>${priceRange(r.preis,r.preis_bis)}</b> inkl. MwSt.${isWS(r)?" (unverbindlich)":""}</span></div>${r.eta_min?`<div><span>Zugesagte Ankunft</span><span>${new Date(new Date(r.accepted_at).getTime()+r.eta_min*60000).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})} Uhr</span></div>`:""}` : "";
   const myO = myOffers[r.id];
   const offline = driver.status==="offline";
-  const actionSofort = `<div class="info"><span>ℹ️</span><span>Nennen Sie einen <b>Festpreis inkl. MwSt.</b> und Ihre Ankunftszeit. Der Kunde sieht beides sofort zusammen mit Ihrem Firmennamen und Ihrer Telefonnummer – Sie sehen Name und Telefon des Kunden. Er kann in den ersten Minuten kostenlos stornieren – rufen Sie ihn am besten sofort an.</span></div>
+  const actionSofort = `<div class="info"><span>ℹ️</span><span>Geben Sie ein <b>Angebot</b> ab: Festpreis inkl. MwSt. und Ankunftszeit. Der Kunde sieht Ihren Firmennamen, Preis und Ankunftszeit und <b>entscheidet selbst</b>. Andere Abschlepper sehen Ihren Preis nicht. Kontaktdaten werden erst ausgetauscht, wenn der Kunde Ihr Angebot annimmt.</span></div>
+     <div class="info" style="background:rgba(255,159,28,.1);border-color:rgba(255,159,28,.4);color:#ffe0b3"><span>🚦</span><span><b>Bitte erst losfahren, wenn der Kunde Ihr Angebot angenommen hat.</b> Vorher ist der Auftrag noch nicht Ihnen zugeteilt.</span></div>
      ${isExclusiveForMe(r)?`<div class="info" style="background:rgba(255,159,28,.1);border-color:rgba(255,159,28,.4);color:#ffe0b3"><span>⭐</span><span>Diese Anfrage kam über Ihren Firmen-Link – nur Sie sehen sie bis ${new Date(r.exklusiv_bis).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})} Uhr.</span></div>`:""}
-     <div class="row"><div><label for="accPreis">Festpreis € (inkl. MwSt.)</label><input type="number" id="accPreis" min="1" step="1" inputmode="decimal" placeholder="z. B. 89"></div>
-     <div><label for="accEta">Ankunft in</label><select id="accEta"><option value="15">15 Min.</option><option value="20">20 Min.</option><option value="30" selected>30 Min.</option><option value="45">45 Min.</option><option value="60">1 Std.</option><option value="90">1,5 Std.</option><option value="120">2 Std.</option></select></div></div>
-     <button class="btn" id="accBtn" onclick="acceptReq('${r.id}')" ${offline?"disabled":""}>Verbindlich annehmen</button>
+     <div class="row"><div><label for="accPreis">Festpreis € (inkl. MwSt.)</label><input type="number" id="accPreis" min="1" step="1" inputmode="decimal" placeholder="z. B. 89" value="${myO?myO.preis:""}"></div>
+     <div><label for="accEta">Ankunft in</label><select id="accEta">${[15,20,30,45,60,90,120].map(m=>`<option value="${m}" ${(myO&&myO.eta_min===m)||(!myO&&m===30)?"selected":""}>${m<60?m+" Min.":(m/60).toString().replace(".5",",5")+" Std."}</option>`).join("")}</select></div></div>
+     <button class="btn" id="accBtn" onclick="sendOffer('${r.id}')" ${offline?"disabled":""}>${myO?"Angebot aktualisieren":"Angebot senden"}</button>
+     ${myO?`<button class="btn red small" onclick="withdrawOffer('${r.id}')">Angebot zurückziehen</button>`:""}
      <button class="btn ghost small" onclick="closeSheet()">Schließen</button>`;
   const actionTermin = `<div class="info"><span>💶</span><span>Termin-Auftrag: Geben Sie ein <b>Angebot inkl. MwSt.</b> ab. Der Kunde sieht Ihren Firmennamen, Preis und Hinweis und wählt selbst. Andere Abschlepper sehen Ihren Preis nicht. Ihre Telefonnummer sieht der Kunde erst, wenn er Ihr Angebot wählt.</span></div>
      ${isExclusiveForMe(r)?`<div class="info" style="background:rgba(255,159,28,.1);border-color:rgba(255,159,28,.4);color:#ffe0b3"><span>⭐</span><span>Über Ihren Firmen-Link – nur Sie sehen diese Anfrage bis ${new Date(r.exklusiv_bis).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})} Uhr.</span></div>`:""}
@@ -1341,16 +1348,24 @@ async function admRatings(id, firma){
   $("sheet").classList.add("open");
 }
 async function sendOffer(id){
-  const preis=parseFloat(String($("offPreis").value).replace(",","."));
+  const sofortEl=$("accPreis");
+  const prEl = sofortEl || $("offPreis");
+  const btn  = sofortEl ? $("accBtn") : $("offBtn");
+  const preis=parseFloat(String(prEl.value).replace(",","."));
   if(!(preis>0)) return toast("Bitte einen Preis eingeben");
-  $("offBtn").disabled=true;
-  const bisEl=$("offPreisBis"), terEl=$("offTermin");
-  const bis = bisEl && bisEl.value!=="" ? parseFloat(String(bisEl.value).replace(",",".")) : null;
-  if(bis!=null && !(bis>=preis)){ $("offBtn").disabled=false; return toast("„bis“ muss größer oder gleich „von“ sein"); }
-  if(bisEl && $("offNotiz").value.trim().length<10){ $("offBtn").disabled=false; return toast("Bitte die Schätzung kurz begründen (mind. 10 Zeichen)"); }
-  const { error } = await sb.rpc("submit_offer", { p_request:id, p_preis:preis, p_notiz:$("offNotiz").value.trim(), p_preis_bis:bis, p_termin_vorschlag: terEl ? terEl.value.trim() : null });
-  if(error){ $("offBtn").disabled=false; return toast(errText(error)); }
-  toast("Angebot gesendet ✅ – der Kunde wird es sehen"); await loadRequests(); openReq(id);
+  btn.disabled=true;
+  let error;
+  if(sofortEl){
+    ({ error } = await sb.rpc("submit_offer", { p_request:id, p_preis:preis, p_notiz:null, p_preis_bis:null, p_termin_vorschlag:null, p_eta:+$("accEta").value }));
+  } else {
+    const bisEl=$("offPreisBis"), terEl=$("offTermin");
+    const bis = bisEl && bisEl.value!=="" ? parseFloat(String(bisEl.value).replace(",",".")) : null;
+    if(bis!=null && !(bis>=preis)){ btn.disabled=false; return toast("„bis“ muss größer oder gleich „von“ sein"); }
+    if(bisEl && $("offNotiz").value.trim().length<10){ btn.disabled=false; return toast("Bitte die Schätzung kurz begründen (mind. 10 Zeichen)"); }
+    ({ error } = await sb.rpc("submit_offer", { p_request:id, p_preis:preis, p_notiz:$("offNotiz").value.trim(), p_preis_bis:bis, p_termin_vorschlag: terEl ? terEl.value.trim() : null }));
+  }
+  if(error){ btn.disabled=false; return toast(errText(error)); }
+  toast("Angebot gesendet ✅ – der Kunde entscheidet"); await loadRequests(); openReq(id);
 }
 async function withdrawOffer(id){
   const { error } = await sb.rpc("withdraw_offer", { p_request:id }); if(error) return toast(errText(error));
@@ -1448,12 +1463,14 @@ async function loadAdmDrivers(){
   let { data, error } = await sb.rpc("admin_drivers");
   if(error) return $("admDrvList").innerHTML=`<div class="msg err">${esc(errText(error))}</div>`;
   data = data || [];
+  let retour = {};
+  try{ const { data:st } = await sb.rpc("admin_auftrag_stats"); (st||[]).forEach(x=>retour[x.driver_id]=x.zurueckgegeben); }catch(e){}
   const pending=data.filter(d=>!d.approved).length;
   $("admDrvList").innerHTML = (pending?`<div class="info"><span>🔔</span><span><b>${pending}</b> neue Registrierung(en) warten auf Freischaltung.</span></div>`:"") +
     (data.length? data.map(d=>`<div class="card" style="margin-top:10px">
       <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
         <div><b>${d.typ==="werkstatt"?"🔧":"🚛"} ${esc(d.firma)}</b> ${d.pro?`<span class="tag new">⭐ Pro · provisionsfrei</span>`:""}${d.approved?`<span class="tag ok">Freigeschaltet</span>`:`<span class="tag new">Wartet</span>`}
-          <div class="hint">📞 ${esc(d.tel)}<br>${esc(loginLabel(d.email))}<br>Registriert ${new Date(d.created_at).toLocaleDateString("de-DE")} · ${d.auftraege} Aufträge${d.bew_anzahl>0?` · <a href="javascript:void 0" onclick="admRatings('${d.id}','${esc(d.firma).replace(/'/g,"")}')">⭐ ${String(d.sterne).replace(".",",")} (${d.bew_anzahl})</a>`:""}</div></div>
+          <div class="hint">📞 ${esc(d.tel)}<br>${esc(loginLabel(d.email))}<br>Registriert ${new Date(d.created_at).toLocaleDateString("de-DE")} · ${d.auftraege} Aufträge${retour[d.id]>0?` · <b style="color:var(--accent)">${retour[d.id]}× zurückgegeben</b>`:""}${d.bew_anzahl>0?` · <a href="javascript:void 0" onclick="admRatings('${d.id}','${esc(d.firma).replace(/'/g,"")}')">⭐ ${String(d.sterne).replace(".",",")} (${d.bew_anzahl})</a>`:""}</div></div>
       </div>
       ${d.id===user.id ? "" : d.approved
         ? `<button class="btn red small" onclick="setApproved('${d.id}',false,this)">Sperren</button>`
