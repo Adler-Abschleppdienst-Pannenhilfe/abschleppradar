@@ -384,7 +384,7 @@ footer a{color:var(--muted)}
   <div id="adm-qr" style="display:none;margin-top:14px">
     <div class="card">
       <b>🔳 QR-Paket zuweisen</b>
-      <p class="hint" style="margin:6px 0 4px">Jede Firma bekommt ein Paket aus 3 Codes: <b>1 = Duftbaum</b>, <b>2 = Sticker klein</b>, <b>3 = Sticker groß</b>. Es wird immer das nächste freie Paket vergeben – ohne Lücken. Wer scannt, landet bei „Hilfe anfordern“, die Anfrage geht zuerst an diese Firma (nur Pro-Firmen).</p>
+      <p class="hint" style="margin:6px 0 4px">Jede Firma bekommt ein Paket aus 3 Codes: <b>1 = Duftbaum</b>, <b>2 = Sticker klein</b>, <b>3 = Sticker groß</b>. Es wird immer das nächste freie Paket vergeben – ohne Lücken. Wer scannt, landet bei „Hilfe anfordern“: Pro-Abschleppdienst → Anfrage zuerst an ihn; Werkstatt/Reifenservice → als Ziel eingetragen; Gutachter → Empfehlung mit Anruf-Button.</p>
       <div class="info" id="qrNext" style="margin:8px 0 0">Lädt …</div>
       <label for="qrFirma">Firma</label><select id="qrFirma"><option value="">— Firma wählen —</option></select>
       <button class="btn small" onclick="qrAssignNext(this)">Nächstes Paket zuweisen</button>
@@ -1794,19 +1794,37 @@ pzLoad(); setInterval(pzLoad, 120000);
 sb.auth.onAuthStateChange(evt=>{ if(evt==="SIGNED_IN"||evt==="SIGNED_OUT") setTimeout(pzLoad, 500); });
 
 // ================= QR-Pool =================
+const QR_TYP={ abschlepper:{e:"🚛",t:"Abschleppdienst"}, werkstatt:{e:"🔧",t:"Werkstatt"}, gutachter:{e:"🔍",t:"Kfz-Gutachter"}, reifenservice:{e:"🛞",t:"Reifenservice"}, autowaesche:{e:"🧽",t:"Autowäsche"} };
 async function openQr(code){
   go("kunde");
-  try{ const { data } = await sb.rpc("qr_resolve", { p_code:code }); if(data) setPrefFirma(data); }catch(e){}
+  try{
+    const { data:d } = await sb.rpc("qr_info", { p_code:code }); if(!d) return;
+    if(d.typ==="abschlepper") return setPrefFirma(d.kurz);
+    const nm=`<b>${esc(d.name)}</b>`, adr=[d.adresse,d.ort].filter(Boolean).join(", ");
+    const tel=d.tel?` <a href="tel:${esc(String(d.tel).replace(/[^0-9+]/g,""))}" style="white-space:nowrap">📞 ${esc(d.name)} anrufen</a>`:"";
+    const setZiel=()=>{ if(!$("kZiel").value) $("kZiel").value=[d.name,adr].filter(Boolean).join(", "); };
+    let txt;
+    if(d.typ==="werkstatt"){ setZiel(); txt=`Empfohlen von ${nm}. Muss Ihr Fahrzeug abgeschleppt werden, ist die Werkstatt schon als Ziel eingetragen – Sie können das jederzeit ändern.`; }
+    else if(d.typ==="reifenservice"){ setZiel(); txt=`Empfohlen von ${nm} (Reifenservice). Bei einer Reifenpanne hilft Ihnen ein Partner in Ihrer Nähe – muss das Fahrzeug abgeschleppt werden, ist ${esc(d.name)} schon als Ziel eingetragen.`; }
+    else if(d.typ==="gutachter") txt=`Empfohlen von ${nm} (Kfz-Gutachter). Nach einem Unfall hilft Ihnen ${esc(d.name)} gern mit dem Gutachten.`;
+    else txt=`Empfohlen von ${nm}.`;
+    $("firmBanner").innerHTML=`<span>${(QR_TYP[d.typ]||{e:"🤝"}).e}</span><span>${txt}${tel}</span>`; $("firmBanner").style.display="flex";
+  }catch(e){}
 }
 const QR_ART=["Duftbaum","Sticker klein","Sticker groß"];
 const qrNr=n=>"q"+String(n).padStart(4,"0");
 let qrRows=[], qrNextGrp=null;
 async function loadQr(){
   $("qrList").innerHTML=`<div class="empty">Lädt …</div>`;
-  const [q, d] = await Promise.all([ sb.rpc("admin_qr_list"), sb.rpc("admin_drivers") ]);
+  const [q, d, pt] = await Promise.all([ sb.rpc("admin_qr_list"), sb.rpc("admin_drivers"), sb.from("partners").select("id,kategorie,name,ort,aktiv").order("name") ]);
   if(q.error){ $("qrList").innerHTML=`<div class="msg err">${esc(errText(q.error))}</div>`; $("qrNext").textContent=""; return; }
-  const firms=(d.data||[]).filter(x=>x.approved).sort((a,b)=>(b.pro-a.pro)||String(a.firma).localeCompare(b.firma));
-  const opts=firms.map(x=>`<option value="${esc(x.id)}">${x.pro?"⭐ ":""}${esc(x.firma)}${x.pro?"":" (kein Pro)"}</option>`).join("");
+  const drv=(d.data||[]).filter(x=>x.approved);
+  const og=(label,arr)=>arr.length?`<optgroup label="${label}">${arr.join("")}</optgroup>`:"";
+  const abs=drv.filter(x=>x.typ!=="werkstatt").sort((a,b)=>(b.pro-a.pro)||String(a.firma).localeCompare(b.firma)).map(x=>`<option value="d:${esc(x.id)}">${x.pro?"⭐ ":""}${esc(x.firma)}${x.pro?"":" (kein Pro)"}</option>`);
+  const pts=(pt.data||[]).filter(x=>x.aktiv);
+  const ws=drv.filter(x=>x.typ==="werkstatt").map(x=>`<option value="d:${esc(x.id)}">${esc(x.firma)} (registriert)</option>`).concat(pts.filter(x=>x.kategorie==="werkstatt").map(x=>`<option value="p:${esc(x.id)}">${esc(x.name)}${x.ort?" · "+esc(x.ort):""}</option>`));
+  const pk=k=>pts.filter(x=>x.kategorie===k).map(x=>`<option value="p:${esc(x.id)}">${esc(x.name)}${x.ort?" · "+esc(x.ort):""}</option>`);
+  const opts=og("🚛 Abschleppdienste",abs)+og("🔧 Werkstätten",ws)+og("🔍 Kfz-Gutachter",pk("gutachter"))+og("🛞 Reifenservice",pk("reifenservice"))+og("🧽 Autowäsche / Aufbereitung",pk("autowaesche"));
   const k1=$("qrFirma").value, k2=$("qrFirmaM").value;
   $("qrFirma").innerHTML=`<option value="">— Firma wählen —</option>`+opts; $("qrFirma").value=k1;
   $("qrFirmaM").innerHTML=`<option value="">— frei (keine Firma) —</option>`+opts; $("qrFirmaM").value=k2;
@@ -1817,7 +1835,7 @@ async function loadQr(){
   for(let g=1; g<=pakete; g++){
     const rs=[byNr[g*3-2],byNr[g*3-1],byNr[g*3]];
     if(rs.some(r=>!r)) continue;
-    const free=rs.every(r=>!r.driver_id);
+    const free=rs.every(r=>!r.driver_id && !r.partner_id);
     if(free){ frei++; if(!qrNextGrp) qrNextGrp=g; }
     groups.push({ g, rs, free });
   }
@@ -1825,10 +1843,10 @@ async function loadQr(){
   const sum=qrRows.reduce((a,r)=>a+r.scans,0);
   const used=groups.filter(x=>!x.free), freeCnt=groups.length-used.length;
   $("qrList").innerHTML=`<div class="hint" style="margin:0 0 8px">${groups.length} Pakete · ${used.length} vergeben · ${freeCnt} frei · ${sum} Scans gesamt</div>`
-    + used.map(x=>{ const r0=x.rs.find(r=>r.driver_id)||x.rs[0]; const mixed=x.rs.some(r=>r.driver_id!==r0.driver_id);
+    + used.map(x=>{ const own=r=>r.driver_id||r.partner_id||""; const r0=x.rs.find(r=>own(r))||x.rs[0]; const mixed=x.rs.some(r=>own(r)!==own(r0)); const ty=QR_TYP[r0.typ]||{e:"🤝",t:""}; const absNoPro=r0.typ==="abschlepper" && !r0.pro;
       return `<div class="card" style="margin-bottom:8px">
-      <div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline"><b>Paket ${x.g} · ${r0.pro?"⭐ ":""}${esc(r0.firma||"?")}</b><span class="hint" style="margin:0">${qrNr(x.g*3-2)}–${qrNr(x.g*3)}</span></div>
-      ${r0.pro?"":`<div class="hint" style="margin:2px 0 0">kein Pro – Codes führen zur normalen Seite</div>`}${mixed?`<div class="hint" style="margin:2px 0 0;color:var(--accent)">⚠️ Codes in diesem Paket gehören verschiedenen Firmen</div>`:""}
+      <div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline"><b>Paket ${x.g} · ${ty.e} ${r0.pro?"⭐ ":""}${esc(r0.firma||"?")}</b><span class="hint" style="margin:0">${qrNr(x.g*3-2)}–${qrNr(x.g*3)}</span></div>
+      <div class="hint" style="margin:2px 0 0">${ty.t}${absNoPro?" – kein Pro, Codes führen zur normalen Seite":""}</div>${mixed?`<div class="hint" style="margin:2px 0 0;color:var(--accent)">⚠️ Codes in diesem Paket gehören verschiedenen Firmen</div>`:""}
       <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:8px">${x.rs.map((r,i)=>`<div style="background:var(--panel2);border-radius:10px;padding:8px;text-align:center"><div class="hint" style="margin:0">${QR_ART[i]}</div><b style="font-size:18px">${r.scans}</b><div class="hint" style="margin:0">${r.last_scan?ago(r.last_scan):"noch kein Scan"}</div></div>`).join("")}</div>
       <button class="linkbtn" style="margin-top:8px;padding:0" onclick="qrShow(this,${x.g})">🔳 QR-Codes anzeigen</button><div class="qrimgs"></div></div>`; }).join("")
     + (freeCnt?`<div class="hint" style="margin:4px 0 10px">${freeCnt} freie Pakete (ab Nr. ${qrNextGrp||"–"})</div>`:"");
@@ -1877,27 +1895,27 @@ async function loadMyQr(){
   }catch(e){}
 }
 async function qrAssignNext(btn){
-  const drv=$("qrFirma").value; if(!drv) return msg("qrMsg","Bitte zuerst eine Firma wählen.");
+  const sel=$("qrFirma").value; if(!sel) return msg("qrMsg","Bitte zuerst eine Firma wählen.");
   if(!qrNextGrp) return msg("qrMsg","Keine freien Pakete – bitte neue anlegen.");
   const g=qrNextGrp; btn.disabled=true;
-  const { error } = await sb.rpc("admin_qr_assign", { p_von:g*3-2, p_bis:g*3, p_driver:drv }); btn.disabled=false;
+  const { error } = await sb.rpc("admin_qr_assign2", { p_von:g*3-2, p_bis:g*3, p_driver:sel.startsWith("d:")?sel.slice(2):null, p_partner:sel.startsWith("p:")?sel.slice(2):null }); btn.disabled=false;
   if(error) return msg("qrMsg", errText(error));
   msg("qrMsg", `Paket ${g} (${qrNr(g*3-2)}–${qrNr(g*3)}) zugewiesen: ${qrNr(g*3-2)} = Duftbaum, ${qrNr(g*3-1)} = Sticker klein, ${qrNr(g*3)} = Sticker groß.`, true); loadQr();
 }
 async function qrAssign(btn){
-  const von=parseInt($("qrVon").value,10), bis=parseInt($("qrBis").value||$("qrVon").value,10), drv=$("qrFirmaM").value||null;
+  const von=parseInt($("qrVon").value,10), bis=parseInt($("qrBis").value||$("qrVon").value,10), sel=$("qrFirmaM").value||"";
   if(!von||!bis||bis<von) return msg("qrMsg","Bitte gültige Nummern eingeben (z. B. 4 bis 6).");
-  btn.disabled=true; const { data, error } = await sb.rpc("admin_qr_assign", { p_von:von, p_bis:bis, p_driver:drv }); btn.disabled=false;
+  btn.disabled=true; const { data, error } = await sb.rpc("admin_qr_assign2", { p_von:von, p_bis:bis, p_driver:sel.startsWith("d:")?sel.slice(2):null, p_partner:sel.startsWith("p:")?sel.slice(2):null }); btn.disabled=false;
   if(error) return msg("qrMsg", errText(error));
-  msg("qrMsg", `${data} Code(s) ${drv?"zugewiesen":"freigegeben"}.`, true); loadQr();
+  msg("qrMsg", `${data} Code(s) ${sel?"zugewiesen":"freigegeben"}.`, true); loadQr();
 }
 async function qrExport(btn){
   btn.disabled=true; const { data, error } = await sb.rpc("admin_qr_list"); btn.disabled=false;
   if(error) return toast(errText(error));
   const f=d=>d?new Date(d).toLocaleString("de-DE"):"";
   const q=v=>'"'+String(v??"").replace(/"/g,'""')+'"';
-  const rows=[["Paket","Nr","Code","Material","Link","Firma","Pro","Zugewiesen am","Scans","Letzter Scan"]]
-    .concat((data||[]).map(r=>[Math.ceil(r.nr/3),r.nr,r.code,QR_ART[(r.nr-1)%3],"https://abschleppradar.de/#"+r.code,r.firma||"frei",r.driver_id?(r.pro?"ja":"nein"):"",f(r.assigned_at),r.scans,f(r.last_scan)]));
+  const rows=[["Paket","Nr","Code","Material","Link","Firma/Partner","Art","Pro","Zugewiesen am","Scans","Letzter Scan"]]
+    .concat((data||[]).map(r=>[Math.ceil(r.nr/3),r.nr,r.code,QR_ART[(r.nr-1)%3],"https://abschleppradar.de/#"+r.code,r.firma||"frei",r.typ?(QR_TYP[r.typ]||{t:r.typ}).t:"",r.typ==="abschlepper"?(r.pro?"ja":"nein"):"",f(r.assigned_at),r.scans,f(r.last_scan)]));
   const csv="\ufeff"+rows.map(r=>r.map(q).join(";")).join("\r\n");
   const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
   a.download="AbschleppRadar-QR-Codes-"+new Date().toISOString().slice(0,10)+".csv"; document.body.appendChild(a); a.click(); a.remove();
