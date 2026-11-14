@@ -22,9 +22,9 @@
 <meta name="application-name" content="AbschleppRadar">
 <title>AbschleppRadar – Pannenhilfe & Abschleppdienst in Ihrer Nähe</title>
 <meta name="description" content="Abschleppdienst oder Pannenhilfe sofort anfordern – Abschlepper in Ihrer Nähe nehmen den Auftrag direkt an.">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="vendor/leaflet.css">
+<script src="vendor/leaflet.js"></script>
+<script src="vendor/supabase.js"></script>
 <style>
 :root{--bg:#0f1720;--panel:#16212d;--panel2:#1d2b3a;--line:#2a3a4c;--text:#eef3f8;--muted:#93a4b7;--accent:#ff9f1c;--accent2:#ffb84d;--green:#2ecc71;--red:#ff5c5c;--blue:#4da3ff;--radius:14px}
 *{box-sizing:border-box}
@@ -660,8 +660,8 @@ footer a{color:var(--muted)}
   <p>Für die Kartenanzeige und die Umwandlung von Adressen in Koordinaten (und umgekehrt) nutzen wir Dienste der OpenStreetMap Foundation (St John’s Innovation Centre, Cowley Road, Cambridge, CB4 0WS, Vereinigtes Königreich). Dabei werden Ihre IP-Adresse sowie die angefragten Kartenausschnitte bzw. Adressen an die OpenStreetMap Foundation übermittelt. Für das Vereinigte Königreich besteht ein Angemessenheitsbeschluss der EU-Kommission. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an einer funktionierenden Kartendarstellung und Adresssuche).</p>
   <p>Beim Abschleppen berechnen wir die Fahrstrecke vom Abholort zum Ziel mit dem Routing-Dienst der FOSSGIS e. V. (routing.openstreetmap.de, Deutschland). Dabei werden Start- und Zielkoordinaten sowie Ihre IP-Adresse übermittelt. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO (Vorbereitung des Auftrags).</p>
 
-  <h4>9. Programmbibliotheken (CDN)</h4>
-  <p>Zur Darstellung der Karte und zur Verbindung mit der Datenbank laden wir Programmbibliotheken von den Diensten unpkg.com und cdn.jsdelivr.net. Dabei wird Ihre IP-Adresse an den jeweiligen Anbieter übermittelt. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an einer zuverlässigen technischen Bereitstellung).</p>
+  <h4>9. Programmbibliotheken</h4>
+  <p>Die auf dieser Website verwendeten Programmbibliotheken (Kartendarstellung, Datenbankverbindung, QR-Codes) liefern wir zusammen mit der Website selbst aus (siehe Ziffer 3). Eine zusätzliche Übermittlung Ihrer IP-Adresse an Anbieter externer Content-Delivery-Netzwerke findet dabei nicht statt.</p>
 
   <h4>Anzahl der Partnerbetriebe</h4>
   <p>Unten auf der Seite zeigen wir, wie viele Partnerbetriebe es gibt. Wenn Sie dort auf „in Ihrer Nähe?“ tippen oder Ihrem Browser den Standortzugriff bereits erlaubt haben, wird Ihr ungefährer Standort einmalig an unsere Datenbank (Supabase, s. oben) übermittelt, um die Betriebe im Umkreis von 100 km zu zählen. Der Standort wird dabei nicht gespeichert. Um zu sehen, wie viele Besucher gerade die Seite geöffnet haben, baut Ihr Browser eine technische Verbindung zu Supabase auf; dabei wird nur eine zufällige, nicht personenbezogene Kennung verwendet und nichts gespeichert. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an einer informativen und stabilen Plattform).</p>
@@ -1885,7 +1885,7 @@ async function loadQr(){
 }
 // --- QR-Bilder (Logo + „Partner von AbschleppRadar“) ---
 let qrLibP=null;
-function qrLib(){ return qrLibP ||= new Promise((res,rej)=>{ const sc=document.createElement("script"); sc.src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"; sc.onload=()=>res(window.qrcode); sc.onerror=()=>{ qrLibP=null; rej(new Error("QR-Bibliothek nicht geladen")); }; document.head.appendChild(sc); }); }
+function qrLib(){ return qrLibP ||= new Promise((res,rej)=>{ const sc=document.createElement("script"); sc.src="vendor/qrcode.js"; sc.onload=()=>res(window.qrcode); sc.onerror=()=>{ qrLibP=null; rej(new Error("QR-Bibliothek nicht geladen")); }; document.head.appendChild(sc); }); }
 function qrSvg(Q, code, sub){
   const q=Q(0,"H"); q.addData("https://abschleppradar.de/#"+code); q.make();
   const n=q.getModuleCount(), qz=4, tot=n+2*qz, L=n<=33?9:11, lo=(n-L)>>1, hi=lo+L, lab=17; let d="";
