@@ -1229,7 +1229,7 @@ let radTimer=null;
 $("rad").oninput = e => { driver.radius_km=+e.target.value; $("radVal").textContent=driver.radius_km+" km"; renderDriver(true);
   clearTimeout(radTimer); radTimer=setTimeout(()=>sb.from("drivers").update({ radius_km:driver.radius_km }).eq("id", user.id).then(()=>{}), 600); };
 
-const SOFORT_FRIST_H = 3; // muss zur Einstellung "sofort_frist_stunden" in der Datenbank passen
+const SOFORT_FRIST_H = 6; // muss zur Einstellung "sofort_frist_stunden" in der Datenbank passen
 async function loadRequests(){
   if(!user) return;
   const { data, error } = await sb.from("requests").select("id,nr,lat,lng,ort,strasse,marke,modell,kennzeichen,probleme,ziel,notiz,wann,termin,status,accepted_by,created_at,preis,preis_bis,eta_min,accepted_at,bevorzugt_driver,exklusiv_bis,kategorie,ziel_km").in("status",["neu","angenommen"]).order("created_at",{ ascending:false }).limit(300);
