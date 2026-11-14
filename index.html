@@ -948,10 +948,16 @@ async function refreshStatus(){
   if(document.querySelector('#okOffers [data-confirm="1"]')) return; // Auswahl läuft gerade
   const { data, error } = await sb.rpc("get_request_status", { p_id:last.id, p_token:last.token });
   if(error || !data){ $("okTitle").textContent="Anfrage nicht gefunden"; $("okText").textContent=""; return; }
-  const s=data.status; $("okDriver").style.display="none"; $("okOffers").innerHTML=""; $("okLive").style.display="none"; renderRate(data); renderKundePush(data); $("cancelBtn").style.display = ["neu","angenommen"].includes(s) ? "block" : "none"; $("okPulse").classList.toggle("done", s!=="neu");
+  const s=data.status; $("okDriver").style.display="none"; $("okOffers").innerHTML=""; $("okLive").style.display="none"; renderRate(data); renderKundePush(data); $("cancelBtn").style.display = (["neu","angenommen"].includes(s) && !data.abgelaufen) ? "block" : "none"; $("okPulse").classList.toggle("done", s!=="neu" || !!data.abgelaufen);
   const ws = data.kategorie==="werkstatt";
   const WS_NOTE = `<div class="hint" style="margin-top:8px">Unverbindliche Schätzung – der endgültige Preis kann erst nach Prüfung vor Ort festgelegt werden.</div>`;
-  if(s==="neu" && ws){
+  if(data.abgelaufen){
+    $("okTitle").textContent="Leider keine Rückmeldung";
+    $("okText").textContent=`Auf Ihre Anfrage Nr. ${data.nr} hat sich kein Betrieb gemeldet. Das tut uns leid. Rufen Sie uns bitte direkt an – wir kümmern uns persönlich darum.`;
+    $("okOffers").innerHTML=`<div class="phone" style="margin-top:12px">0162 434 0038</div><a class="btn small" href="tel:+491624340038">📞 Jetzt anrufen</a>`;
+    stopStatusPoll();
+  }
+  else if(s==="neu" && ws){
     const a=data.angebote||[];
     $("okTitle").textContent = a.length ? `${a.length} Preisschätzung${a.length>1?"en":""} für Anfrage Nr. ${data.nr}` : `Anfrage Nr. ${data.nr} gesendet`;
     $("okText").textContent = a.length ? "Vergleichen Sie die Schätzungen und wählen Sie eine Werkstatt. Alle Preise inkl. MwSt." : "Werkstätten in Ihrer Nähe wurden benachrichtigt. Ihre Preisschätzungen erscheinen hier automatisch – Sie können diese Seite offen lassen oder später wiederkommen.";
@@ -1223,15 +1229,20 @@ let radTimer=null;
 $("rad").oninput = e => { driver.radius_km=+e.target.value; $("radVal").textContent=driver.radius_km+" km"; renderDriver(true);
   clearTimeout(radTimer); radTimer=setTimeout(()=>sb.from("drivers").update({ radius_km:driver.radius_km }).eq("id", user.id).then(()=>{}), 600); };
 
+const SOFORT_FRIST_H = 3; // muss zur Einstellung "sofort_frist_stunden" in der Datenbank passen
 async function loadRequests(){
   if(!user) return;
   const { data, error } = await sb.from("requests").select("id,nr,lat,lng,ort,strasse,marke,modell,kennzeichen,probleme,ziel,notiz,wann,termin,status,accepted_by,created_at,preis,preis_bis,eta_min,accepted_at,bevorzugt_driver,exklusiv_bis,kategorie,ziel_km").in("status",["neu","angenommen"]).order("created_at",{ ascending:false }).limit(300);
   if(error) return toast(errText(error));
+  // Sofort-Anfragen, auf die niemand reagiert hat, laufen nach SOFORT_FRIST_H Stunden ab
+  // und verschwinden aus der Liste (Termin-Anfragen bleiben stehen).
+  const abgelaufen = Date.now() - SOFORT_FRIST_H*3600*1000;
+  const liste = data.filter(r => !(r.status==="neu" && r.wann==="sofort" && new Date(r.created_at).getTime() < abgelaufen));
   const { data:ao } = await sb.from("angebote").select("request_id,preis,preis_bis,notiz,termin_vorschlag").eq("driver_id", user.id);
   myOffers = Object.fromEntries((ao||[]).map(o=>[o.request_id,o]));
   const before = new Set(requests.map(r=>r.id));
-  const fresh = data.filter(r=>r.status==="neu" && !before.has(r.id));
-  requests = data; renderDriver();
+  const fresh = liste.filter(r=>r.status==="neu" && !before.has(r.id));
+  requests = liste; renderDriver();
   if(before.size && fresh.length && driver.status!=="offline"){ const pos=me||KREFELD; const near=fresh.filter(r=>dist(pos,[r.lat,r.lng])<=driver.radius_km); if(near.length){ toast(`🔔 Neuer Auftrag: ${P[near[0].probleme[0]].t} in ${near[0].ort||"der Nähe"}`); try{ navigator.vibrate && navigator.vibrate([200,100,200]); }catch(e){} } }
 }
 
