@@ -524,7 +524,7 @@ footer a{color:var(--muted)}
 <!-- PARTNER WERDEN -->
 <section class="view" id="v-mitmachen">
   <h2>Partner werden</h2>
-  <p class="lead" style="margin-bottom:14px">AbschleppRadar startet am <b>01.12.2026</b> – deutschlandweit. Jetzt in der Pilotphase: Werden Sie <b>Gründungspartner</b> und erhalten Sie Aufträge aus Ihrer Nähe.</p>
+  <p class="lead" style="margin-bottom:14px">AbschleppRadar startet am <b>01.01.2027</b> – deutschlandweit. Jetzt in der Pilotphase: Werden Sie <b>Gründungspartner</b> und erhalten Sie Aufträge aus Ihrer Nähe.</p>
 
   <div class="card">
     <b>Für wen?</b>
@@ -549,7 +549,7 @@ footer a{color:var(--muted)}
 
   <h3>Konditionen in der Pilotphase</h3>
   <div class="card pwcond">
-    <div><b>Abschleppdienste, Werkstätten, Reifenservice, Aufbereitung</b><span><b class="pwfree">6 Monate kostenlos</b> – Ihre 6 Monate starten am 01.12.2026, bei späterer Anmeldung mit Ihrer Anmeldung. Wer sich jetzt schon anmeldet, verliert also keinen Tag. Danach zahlen Sie nur für vermittelte Aufträge (bzw. für den Verzeichnis-Eintrag) – keine Grundgebühr. Die Höhe legen wir vor dem Ende Ihrer Gratisphase fest – Sie entscheiden dann frei, ob Sie weitermachen.</span></div>
+    <div><b>Abschleppdienste, Werkstätten, Reifenservice, Aufbereitung</b><span><b class="pwfree">6 Monate kostenlos</b> – Ihre 6 Monate starten am 01.01.2027, bei späterer Anmeldung mit Ihrer Anmeldung. Wer sich jetzt schon anmeldet, verliert also keinen Tag. Danach zahlen Sie nur für vermittelte Aufträge (bzw. für den Verzeichnis-Eintrag) – keine Grundgebühr. Die Höhe legen wir vor dem Ende Ihrer Gratisphase fest – Sie entscheiden dann frei, ob Sie weitermachen.</span></div>
     <div><b>Kfz-Gutachter</b><span>Konditionen auf Anfrage – sprechen Sie uns an.</span></div>
     <div><b>Kein Abo</b><span>Die Partnerschaft selbst hat keine Vertragsbindung – Sie können jederzeit aufhören. Nur das freiwillige Pro-Paket hat 3 Monate Mindestlaufzeit.</span></div>
     <div><b>Für Ihre Kunden kostenlos</b><span>Kunden zahlen keine Gebühr an AbschleppRadar – sie zahlen nur Ihren Preis für die Leistung.</span></div>
@@ -1517,7 +1517,7 @@ async function setApproved(id, ok, btn){
 $("abrMonat").onchange = loadAbr;
 $("abrPreis").oninput = () => { store.set("ar_preis", $("abrPreis").value); renderAbr(); };
 async function loadAbr(){
-  $("abrFrei").style.display="flex"; $("abrFrei").innerHTML=`<span>🎁</span><span>Gratisphase: Jede Firma zahlt 6 Monate keine Auftragsgebühr – gerechnet ab dem Start 01.12.2026 bzw. ab ihrer Registrierung, wenn diese später liegt. Pro-Partner (19,90 €/Monat inkl. MwSt.) zahlen nie eine Auftragsgebühr. Diese Aufträge erscheinen hier als „nicht berechnet“.</span>`;
+  $("abrFrei").style.display="flex"; $("abrFrei").innerHTML=`<span>🎁</span><span>Gratisphase: Jede Firma zahlt 6 Monate keine Auftragsgebühr – gerechnet ab dem Start 01.01.2027 bzw. ab ihrer Registrierung, wenn diese später liegt. Pro-Partner (19,90 €/Monat inkl. MwSt.) zahlen nie eine Auftragsgebühr. Diese Aufträge erscheinen hier als „nicht berechnet“.</span>`;
   $("abrOut").innerHTML=`<div class="empty">Lädt …</div>`;
   const r=monthRange($("abrMonat").value);
   const { data, error } = await sb.rpc("admin_abrechnung", { p_von:r.von, p_bis:r.bis });
