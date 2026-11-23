@@ -85,10 +85,12 @@ begin
   from unnest(r.probleme) p;
 
   v_footer := case
-    when p_only is not null then E'\n\n⭐ Direktanfrage über Ihren Firmen-Link – nur Sie sehen diesen Auftrag in den nächsten 5 Minuten.'
+    when p_only is not null then E'\n\n⭐ Direktanfrage über Ihren Firmen-Link – nur Sie sehen diesen Auftrag in den nächsten 5 Minuten. Geben Sie Festpreis und Ankunftszeit an.'
     when r.kategorie = 'werkstatt' then E'\n\n💶 Geben Sie in der App eine unverbindliche Preisschätzung mit kurzer Begründung ab – der Kunde wählt.'
     when r.wann = 'termin' then E'\n\n💶 Termin-Auftrag: Geben Sie in der App ein Angebot ab – der Kunde wählt.'
-    else E'\n\nWer zuerst annimmt (mit Festpreis), bekommt den Auftrag.' end;
+    -- Seit dem Angebots-Verfahren (13.11.) gilt NICHT mehr "wer zuerst annimmt":
+    -- der Kunde wählt aus den Angeboten aus.
+    else E'\n\n💶 Geben Sie in der App Festpreis und Ankunftszeit an – der Kunde wählt aus. Bitte erst losfahren, wenn Ihr Angebot angenommen wurde.' end;
 
   for d in
     select id, telegram_chat_id, lat, lng, radius_km, status from drivers

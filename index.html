@@ -237,6 +237,7 @@ footer a{color:var(--muted)}
 <section class="view" id="v-kunde">
   <h2>Hilfe anfordern</h2>
   <div class="info" id="firmBanner" style="display:none;margin-bottom:6px"></div>
+  <div class="info" style="margin-bottom:10px"><span>📞</span><span>Lieber direkt sprechen? <a href="tel:+491624340038"><b>0162 434 0038</b></a> – wir nehmen Ihre Anfrage auch telefonisch auf.</span></div>
   <form id="kForm" novalidate>
     <h3>1 · Was ist passiert?</h3>
     <div class="probgrid" id="probChips"></div>
@@ -266,8 +267,6 @@ footer a{color:var(--muted)}
       <div><label for="kModell">Modell</label><input id="kModell" placeholder="z. B. B180"></div>
     </div>
     <datalist id="marken"><option>Audi</option><option>BMW</option><option>Citroën</option><option>Dacia</option><option>Fiat</option><option>Ford</option><option>Hyundai</option><option>Kia</option><option>Mercedes-Benz</option><option>Nissan</option><option>Opel</option><option>Peugeot</option><option>Renault</option><option>Seat</option><option>Skoda</option><option>Tesla</option><option>Toyota</option><option>VW</option></datalist>
-    <label for="kKz">Kennzeichen <span style="opacity:.6">(optional)</span></label>
-    <input id="kKz" placeholder="KR-AB 123">
 
     <h3>4 · Wann?</h3>
     <div class="seg" id="whenSeg"><button type="button" data-v="sofort" class="on">Sofort</button><button type="button" data-v="termin">Termin wählen</button></div>
@@ -277,11 +276,11 @@ footer a{color:var(--muted)}
     </div>
 
     <h3>5 · Kontakt</h3>
-    <div class="info"><span>🔒</span><span>Ihr <b>Name und Ihre Telefonnummer</b> werden erst angezeigt, <b>nachdem ein Abschlepper Ihren Auftrag angenommen hat</b> – und nur diesem einen Abschlepper. Andere Abschlepper sehen nur Ort, Fahrzeug und Problem.</span></div>
+    <div class="info"><span>🔒</span><span>Ihr <b>Name und Ihre Telefonnummer</b> werden erst angezeigt, <b>wenn Sie ein Angebot annehmen</b> – und nur dem Betrieb, den Sie ausgewählt haben. Alle anderen sehen nur Ort, Fahrzeug und Problem.</span></div>
     <label for="kName">Name</label><input id="kName" autocomplete="name">
     <label for="kTel">Telefon</label><input id="kTel" type="tel" autocomplete="tel" placeholder="0151 …">
     <label for="kMail">E-Mail <span style="opacity:.6">(optional)</span></label><input id="kMail" type="email" autocomplete="email">
-    <label class="check"><input type="checkbox" id="kDs"> <span>Ich bin einverstanden, dass mein Standort und meine Auftragsdaten an Abschleppdienste im Umkreis weitergegeben werden und dass mein Name und meine Telefonnummer dem Abschlepper angezeigt werden, der meinen Auftrag annimmt. Details in der <a href="#datenschutz">Datenschutzerklärung</a>.</span></label>
+    <label class="check"><input type="checkbox" id="kDs"> <span>Ich bin einverstanden, dass mein Standort und meine Auftragsdaten an Abschleppdienste im Umkreis weitergegeben werden und dass mein Name und meine Telefonnummer dem Betrieb angezeigt werden, dessen Angebot ich annehme. Details in der <a href="#datenschutz">Datenschutzerklärung</a>.</span></label>
     <div class="hint" style="margin-top:14px">AbschleppRadar vermittelt nur. Ihr Vertrag kommt direkt mit dem Abschleppunternehmen zustande, das Ihren Auftrag übernimmt – Preis, Durchführung und Haftung liegen bei diesem Unternehmen. Fahrzeuge, Versicherungen und Genehmigungen der Unternehmen werden von uns nicht geprüft. <a href="#impressum">Mehr dazu</a>. Bei Unfällen mit Verletzten: zuerst Notruf <b>112</b>.</div>
     <div class="msg" id="kMsg"></div>
     <button class="btn" type="submit" id="kSubmit">Hilfe anfordern</button>
@@ -949,7 +948,7 @@ $("kForm").onsubmit = async e => {
       if(z) zielKm = await routeKm([lat,lng], z);
     }
     const { data, error } = await sb.rpc("create_request", {
-      p_lat:lat, p_lng:lng, p_ort:v("kOrt"), p_strasse:v("kStr"), p_marke:v("kMarke"), p_modell:v("kModell"), p_kennzeichen:v("kKz"),
+      p_lat:lat, p_lng:lng, p_ort:v("kOrt"), p_strasse:v("kStr"), p_marke:v("kMarke"), p_modell:v("kModell"), p_kennzeichen:null,
       p_probleme: needsTow() && !selProb.has("abschleppen") ? [...selProb,"abschleppen"] : [...selProb], p_ziel: needsTow() ? v("kZiel") : "",
       p_notiz: [probDetails(), v("kNote")].filter(Boolean).join("\n").slice(0,300), p_wann:when, p_termin:termin,
       p_name:v("kName"), p_tel:v("kTel"), p_mail:v("kMail"), p_firma:prefFirma, p_ziel_km:zielKm });
