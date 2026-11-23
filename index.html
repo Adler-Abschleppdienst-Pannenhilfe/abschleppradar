@@ -1273,6 +1273,13 @@ function zeitBadge(o){
   if(s) return `<span class="tag ok">🟢 Jetzt geöffnet</span>`;
   return `<span class="tag plan">Geschlossen${o.oeffnung_von?" · öffnet "+String(o.oeffnung_von).slice(0,5):""}</span>`;
 }
+// Admin: welche Firma kann ueberhaupt benachrichtigt werden?
+function kanalZeile(k){
+  if(!k) return "";
+  const ok = k.telegram || k.push > 0;
+  return `<div class="hint" style="margin:2px 0 0">🔔 Push ${k.push>0?"✅":"❌"} · ✈️ Telegram ${k.telegram?"✅":"❌"}`
+       + (ok ? "" : ` · <b style="color:var(--accent)">⚠️ erfährt von keinem Auftrag</b>`) + `</div>`;
+}
 function zZeigen(){ $("zZeiten").style.display = ynGet("z24") ? "none" : "block"; }
 $("z24").addEventListener("click", e => { if(e.target.closest("button")) setTimeout(zZeigen,0); });
 function fillZeiten(){
@@ -1548,12 +1555,14 @@ async function loadAdmDrivers(){
   data = data || [];
   let retour = {};
   try{ const { data:st } = await sb.rpc("admin_auftrag_stats"); (st||[]).forEach(x=>retour[x.driver_id]=x.zurueckgegeben); }catch(e){}
+  let kanal = {};
+  try{ const { data:ks } = await sb.rpc("admin_kanal_status"); (ks||[]).forEach(x=>kanal[x.driver_id]=x); }catch(e){}
   const pending=data.filter(d=>!d.approved).length;
   $("admDrvList").innerHTML = (pending?`<div class="info"><span>🔔</span><span><b>${pending}</b> neue Registrierung(en) warten auf Freischaltung.</span></div>`:"") +
     (data.length? data.map(d=>`<div class="card" style="margin-top:10px">
       <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
         <div><b>${d.typ==="werkstatt"?"🔧":"🚛"} ${esc(d.firma)}</b> ${d.pro?`<span class="tag new">⭐ Pro · provisionsfrei</span>`:""}${d.approved?`<span class="tag ok">Freigeschaltet</span>`:`<span class="tag new">Wartet</span>`}
-          <div class="hint">📞 ${esc(d.tel)}<br>${esc(loginLabel(d.email))}<br>Registriert ${new Date(d.created_at).toLocaleDateString("de-DE")} · ${d.auftraege} Aufträge${retour[d.id]>0?` · <b style="color:var(--accent)">${retour[d.id]}× zurückgegeben</b>`:""}${d.bew_anzahl>0?` · <a href="javascript:void 0" onclick="admRatings('${d.id}','${esc(d.firma).replace(/'/g,"")}')">⭐ ${String(d.sterne).replace(".",",")} (${d.bew_anzahl})</a>`:""}</div></div>
+          <div class="hint">📞 ${esc(d.tel)}<br>${esc(loginLabel(d.email))}<br>Registriert ${new Date(d.created_at).toLocaleDateString("de-DE")} · ${d.auftraege} Aufträge${retour[d.id]>0?` · <b style="color:var(--accent)">${retour[d.id]}× zurückgegeben</b>`:""}${d.bew_anzahl>0?` · <a href="javascript:void 0" onclick="admRatings('${d.id}','${esc(d.firma).replace(/'/g,"")}')">⭐ ${String(d.sterne).replace(".",",")} (${d.bew_anzahl})</a>`:""}</div>${kanalZeile(kanal[d.id])}</div>
       </div>
       ${d.id===user.id ? "" : d.approved
         ? `<button class="btn red small" onclick="setApproved('${d.id}',false,this)">Sperren</button>`

@@ -160,6 +160,19 @@ begin
   return true;
 end $function$;
 
+-- 6) Für den Admin: welcher Betrieb kann überhaupt benachrichtigt werden?
+--    Eine Firma ohne Telegram UND ohne Push-Abo steht zwar im System,
+--    erfährt aber von keinem einzigen Auftrag. Das muss sichtbar sein.
+create or replace function public.admin_kanal_status()
+returns table(driver_id uuid, telegram boolean, push integer)
+language sql stable security definer set search_path to 'public' as $function$
+  select d.id,
+         d.telegram_chat_id is not null,
+         (select count(*)::int from push_subs ps where ps.driver_id = d.id)
+  from drivers d
+  where public.is_admin();
+$function$;
+
 -- Kontrolle: wer ist gerade offen?
 select firma,
        case when notdienst_24h then '24 Stunden'
