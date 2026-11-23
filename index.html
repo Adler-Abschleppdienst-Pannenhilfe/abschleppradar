@@ -367,6 +367,21 @@ footer a{color:var(--muted)}
   <div class="gpsbox" id="tgBox" style="margin-top:10px;flex-wrap:wrap"></div>
   <div class="gpsbox" id="linkBox" style="margin-top:10px;flex-wrap:wrap"></div>
   <div class="card" id="myQrBox" style="display:none;margin-top:10px"></div>
+  <div class="card" id="zeitBox" style="margin-top:10px">
+    <b>🕐 Wann möchten Sie benachrichtigt werden?</b>
+    <div class="seg yn" id="z24" style="margin-top:8px"><button type="button" data-v="true" class="on">🌙 Rund um die Uhr</button><button type="button" data-v="false">🕗 Feste Zeiten</button></div>
+    <div id="zZeiten" style="display:none;margin-top:10px">
+      <div class="row">
+        <div><label for="zVon">von</label><input id="zVon" type="time" value="08:00"></div>
+        <div><label for="zBis">bis</label><input id="zBis" type="time" value="18:00"></div>
+      </div>
+      <label class="check"><input type="checkbox" id="zSa"> <span>auch samstags</span></label>
+      <label class="check"><input type="checkbox" id="zSo"> <span>auch sonntags</span></label>
+    </div>
+    <p class="hint" style="margin:10px 0 0">Außerhalb dieser Zeiten senden wir Ihnen <b>keine Benachrichtigung</b>. Die Aufträge sehen Sie trotzdem in der App und können jederzeit ein Angebot abgeben.</p>
+    <div class="msg" id="zMsg"></div>
+    <button class="btn small" id="zSave" onclick="saveZeiten(this)">Zeiten speichern</button>
+  </div>
   <label>Einsatz-Umkreis</label>
   <div class="radius-row"><input type="range" id="rad" min="5" max="150" step="5" value="30"><b id="radVal">30 km</b></div>
   <div id="map"></div>
@@ -419,6 +434,14 @@ footer a{color:var(--muted)}
       <label for="pkBeschr">Kurzbeschreibung <span style="opacity:.6">(optional, max. 400 Zeichen)</span></label><textarea id="pkBeschr" maxlength="400" placeholder="z. B. Unfallgutachten, Wertgutachten – Termine auch am Wochenende"></textarea>
       <label>Kunden ohne Termin willkommen? <span style="opacity:.6">(wird Kunden angezeigt)</span></label>
       <div class="seg yn" id="pkOhne"><button type="button" data-v="true">✅ Ja</button><button type="button" data-v="false" class="on">Nein</button></div>
+      <label>Öffnungszeiten <span style="opacity:.6">(optional – wird Kunden als „Jetzt geöffnet“ angezeigt)</span></label>
+      <div class="seg yn" id="pk24"><button type="button" data-v="true">🌙 Rund um die Uhr</button><button type="button" data-v="false" class="on">🕗 Feste Zeiten</button></div>
+      <div class="row" style="margin-top:8px">
+        <div><label for="pkVon">von</label><input id="pkVon" type="time"></div>
+        <div><label for="pkBis">bis</label><input id="pkBis" type="time"></div>
+      </div>
+      <label class="check"><input type="checkbox" id="pkSa"> <span>auch samstags geöffnet</span></label>
+      <label class="check"><input type="checkbox" id="pkSo"> <span>auch sonntags geöffnet</span></label>
       <label>Möchte später Anfragen direkt über AbschleppRadar erhalten? <span style="opacity:.6">(nur für Sie)</span></label>
       <div class="seg yn" id="pkAnfr"><button type="button" data-v="true">Ja</button><button type="button" data-v="false">Nein</button><button type="button" data-v="null" class="on">Nicht gefragt</button></div>
       <label class="check"><input type="checkbox" id="pkZust"> <span>Der Inhaber hat zugestimmt, dass diese Angaben öffentlich bei AbschleppRadar angezeigt werden.</span></label>
@@ -1195,6 +1218,7 @@ function startDriver(){
   $("fHello").textContent = driver.firma;
   renderTelegram(); renderFirmLink(); loadMyRatings(); renderPush(); loadMyQr();
   $("rad").value = driver.radius_km; $("radVal").textContent = driver.radius_km+" km";
+  fillZeiten();
   me = (driver.lat!=null && driver.lng!=null) ? [driver.lat, driver.lng] : null;
   if(driver.status==="offline") setStatus("verfuegbar");
   startGps(); loadRequests();
@@ -1225,6 +1249,52 @@ async function setStatus(s){
   if(error) toast(errText(error));
 }
 $("statusBtns").onclick = e => { const b=e.target.closest("button"); if(b) setStatus(b.dataset.s); };
+// ---------- Öffnungszeiten ----------
+// Aktuelle Zeit in Deutschland, unabhängig von der Zeitzone des Geräts.
+function berlinJetzt(){
+  const p = new Intl.DateTimeFormat("en-GB",{ timeZone:"Europe/Berlin", hour:"2-digit", minute:"2-digit", weekday:"short", hour12:false }).formatToParts(new Date());
+  const g = t => p.find(x=>x.type===t).value;
+  return { min: (+g("hour"))*60 + (+g("minute")), wd: g("weekday") };
+}
+// true = offen, false = geschlossen, null = keine Angabe
+function offenJetzt(o){
+  if(o.notdienst_24h) return true;
+  if(!o.oeffnung_von || !o.oeffnung_bis) return null;
+  const n = berlinJetzt();
+  if(n.wd==="Sat" && !o.offen_sa) return false;
+  if(n.wd==="Sun" && !o.offen_so) return false;
+  const m = t => { const a=String(t).split(":"); return (+a[0])*60 + (+a[1]); };
+  const v = m(o.oeffnung_von), b = m(o.oeffnung_bis);
+  return b>v ? (n.min>=v && n.min<b) : (n.min>=v || n.min<b);
+}
+function zeitBadge(o){
+  const s = offenJetzt(o);
+  if(s===null) return "";
+  if(s) return `<span class="tag ok">🟢 Jetzt geöffnet</span>`;
+  return `<span class="tag plan">Geschlossen${o.oeffnung_von?" · öffnet "+String(o.oeffnung_von).slice(0,5):""}</span>`;
+}
+function zZeigen(){ $("zZeiten").style.display = ynGet("z24") ? "none" : "block"; }
+$("z24").addEventListener("click", e => { if(e.target.closest("button")) setTimeout(zZeigen,0); });
+function fillZeiten(){
+  ynSet("z24", driver.notdienst_24h !== false);
+  if(driver.oeffnung_von) $("zVon").value = String(driver.oeffnung_von).slice(0,5);
+  if(driver.oeffnung_bis) $("zBis").value = String(driver.oeffnung_bis).slice(0,5);
+  $("zSa").checked = !!driver.offen_sa; $("zSo").checked = !!driver.offen_so;
+  zZeigen();
+}
+async function saveZeiten(btn){
+  const r24 = ynGet("z24");
+  if(!r24 && (!$("zVon").value || !$("zBis").value)) return msg("zMsg","Bitte Zeit von und bis angeben.");
+  if(!r24 && $("zVon").value === $("zBis").value) return msg("zMsg","„von“ und „bis“ dürfen nicht gleich sein.");
+  btn.disabled=true;
+  const { error } = await sb.rpc("set_oeffnungszeiten", { p_24h:r24, p_von:r24?null:$("zVon").value, p_bis:r24?null:$("zBis").value,
+                                                          p_sa:$("zSa").checked, p_so:$("zSo").checked });
+  btn.disabled=false;
+  if(error) return msg("zMsg", errText(error));
+  msg("zMsg","");
+  Object.assign(driver, { notdienst_24h:r24, oeffnung_von:r24?null:$("zVon").value, oeffnung_bis:r24?null:$("zBis").value, offen_sa:$("zSa").checked, offen_so:$("zSo").checked });
+  toast("Zeiten gespeichert ✅");
+}
 let radTimer=null;
 $("rad").oninput = e => { driver.radius_km=+e.target.value; $("radVal").textContent=driver.radius_km+" km"; renderDriver(true);
   clearTimeout(radTimer); radTimer=setTimeout(()=>sb.from("drivers").update({ radius_km:driver.radius_km }).eq("id", user.id).then(()=>{}), 600); };
@@ -1420,7 +1490,7 @@ async function openPartners(kat){
   go("partner");
   $("ptCta").style.display = kat==="werkstatt" ? "block" : "none";
   $("ptList").innerHTML=`<div class="empty">Lädt …</div>`;
-  const { data, error } = await sb.from("partners").select("id,kategorie,name,adresse,ort,tel,email,website,beschreibung,lat,lng,ohne_termin").eq("kategorie", kat).eq("aktiv", true).limit(200);
+  const { data, error } = await sb.from("partners").select("id,kategorie,name,adresse,ort,tel,email,website,beschreibung,lat,lng,ohne_termin,notdienst_24h,oeffnung_von,oeffnung_bis,offen_sa,offen_so").eq("kategorie", kat).eq("aktiv", true).limit(200);
   if(error){ $("ptList").innerHTML=`<div class="msg err">${esc(errText(error))}</div>`; return; }
   ptData=data||[]; renderPartners();
 }
@@ -1436,7 +1506,7 @@ function renderPartners(){
     const web = p.website ? (/^https?:\/\//i.test(p.website)?p.website:"https://"+p.website) : "";
     const route = p.lat!=null ? `https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}` : (p.adresse||p.ort ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([p.name,p.adresse,p.ort].filter(Boolean).join(", "))}` : "");
     return `<div class="card" style="margin-bottom:10px">
-      <div style="display:flex;justify-content:space-between;gap:10px"><div><b>${esc(p.name)}</b>${p.ohne_termin?`<span class="tag ok">✅ Ohne Termin</span>`:""}<div class="hint">${esc([p.adresse,p.ort].filter(Boolean).join(", "))}</div></div>${d!=null?`<div class="km" style="font-weight:700;color:var(--accent);text-align:right;flex:none">${km(d)}<div class="hint" style="margin:0">km</div></div>`:""}</div>
+      <div style="display:flex;justify-content:space-between;gap:10px"><div><b>${esc(p.name)}</b>${p.ohne_termin?`<span class="tag ok">✅ Ohne Termin</span>`:""}${zeitBadge(p)}<div class="hint">${esc([p.adresse,p.ort].filter(Boolean).join(", "))}</div></div>${d!=null?`<div class="km" style="font-weight:700;color:var(--accent);text-align:right;flex:none">${km(d)}<div class="hint" style="margin:0">km</div></div>`:""}</div>
       ${p.beschreibung?`<p class="hint" style="margin:8px 0 0">${esc(p.beschreibung)}</p>`:""}
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
         ${p.tel?`<a class="tgbtn" style="background:var(--accent);color:#1a1200" href="tel:${esc(p.tel.replace(/[^\d+]/g,""))}">📞 ${esc(p.tel)}</a>`:""}
@@ -1742,7 +1812,8 @@ async function pkGeocode(){
 function pkReset(){
   pkEdit=null; pkLatLng=null;
   ["pkName","pkAdresse","pkOrt","pkTel","pkMail","pkWeb","pkBeschr"].forEach(id=>$(id).value="");
-  $("pkZust").checked=false; ynSet("pkOhne",false); ynSet("pkAnfr",null); $("pkTitle").textContent="Neuen Partner eintragen"; $("pkSave").textContent="Speichern"; $("pkCancel").style.display="none"; msg("pkMsg",""); pkShowPos();
+  $("pkZust").checked=false; ynSet("pkOhne",false); ynSet("pkAnfr",null);
+  ynSet("pk24",false); $("pkVon").value=""; $("pkBis").value=""; $("pkSa").checked=false; $("pkSo").checked=false; $("pkTitle").textContent="Neuen Partner eintragen"; $("pkSave").textContent="Speichern"; $("pkCancel").style.display="none"; msg("pkMsg",""); pkShowPos();
 }
 async function pkSave(){
   const v=id=>$(id).value.trim();
@@ -1752,7 +1823,11 @@ async function pkSave(){
   if(!pkLatLng && (v("pkAdresse")||v("pkOrt"))){ await pkGeocode(); }
   const row={ kategorie:$("pkKat").value, name:v("pkName"), adresse:v("pkAdresse")||null, ort:v("pkOrt")||null, tel:v("pkTel")||null, email:v("pkMail")||null,
               website:v("pkWeb")||null, beschreibung:v("pkBeschr")||null, lat:pkLatLng?pkLatLng[0]:null, lng:pkLatLng?pkLatLng[1]:null, zustimmung:true,
-              ohne_termin:ynGet("pkOhne")===true, anfragen:ynGet("pkAnfr"), updated_at:new Date().toISOString() };
+              ohne_termin:ynGet("pkOhne")===true, anfragen:ynGet("pkAnfr"), updated_at:new Date().toISOString(),
+              notdienst_24h:ynGet("pk24")===true,
+              oeffnung_von: ynGet("pk24")===true ? null : ($("pkVon").value||null),
+              oeffnung_bis: ynGet("pk24")===true ? null : ($("pkBis").value||null),
+              offen_sa:$("pkSa").checked, offen_so:$("pkSo").checked };
   $("pkSave").disabled=true;
   const { error } = pkEdit ? await sb.from("partners").update(row).eq("id", pkEdit) : await sb.from("partners").insert(row);
   $("pkSave").disabled=false;
@@ -1780,6 +1855,10 @@ function pkEditStart(id){
   pkEdit=id; $("pkKat").value=p.kategorie; $("pkName").value=p.name||""; $("pkAdresse").value=p.adresse||""; $("pkOrt").value=p.ort||"";
   $("pkTel").value=p.tel||""; $("pkMail").value=p.email||""; $("pkWeb").value=p.website||""; $("pkBeschr").value=p.beschreibung||""; $("pkZust").checked=!!p.zustimmung;
   ynSet("pkOhne", !!p.ohne_termin); ynSet("pkAnfr", p.anfragen===undefined ? null : p.anfragen);
+  ynSet("pk24", !!p.notdienst_24h);
+  $("pkVon").value = p.oeffnung_von ? String(p.oeffnung_von).slice(0,5) : "";
+  $("pkBis").value = p.oeffnung_bis ? String(p.oeffnung_bis).slice(0,5) : "";
+  $("pkSa").checked = !!p.offen_sa; $("pkSo").checked = !!p.offen_so;
   pkLatLng = p.lat!=null ? [p.lat,p.lng] : null; pkShowPos();
   $("pkTitle").textContent="Partner bearbeiten"; $("pkSave").textContent="Änderungen speichern"; $("pkCancel").style.display="block";
   $("adm-partner").scrollIntoView({ behavior:"smooth" });
