@@ -1,0 +1,19 @@
+name: Supabase Keepalive
+
+# Ruft einmal taeglich die Supabase-Datenbank ab, damit das kostenlose
+# Projekt nicht wegen Inaktivitaet pausiert wird.
+on:
+  schedule:
+    - cron: '23 5 * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Supabase abfragen
+        run: |
+          curl -fsS --retry 3 --retry-delay 10 \
+            "https://tgpabumwznytuplybejc.supabase.co/rest/v1/partners?select=id&limit=1" \
+            -H "apikey: sb_publishable_aJ8s0M0GtuVna3LgBpD9jw_rGGA7TMp" \
+            -H "Authorization: Bearer sb_publishable_aJ8s0M0GtuVna3LgBpD9jw_rGGA7TMp"

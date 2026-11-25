@@ -1,0 +1,79 @@
+name: Supabase Schema-Backup
+
+# Sichert einmal woechentlich den STRUKTUR-Stand der Datenbank
+# (Tabellen, Funktionen, RLS-Policies, Trigger, Indizes, Cron-Jobs)
+# nach backup/schema.sql und committet ihn.
+#
+# ACHTUNG: --schema-only. Es werden KEINE Daten gesichert, also auch
+# keine Kundendaten. Das ist Absicht -- Kundendaten duerfen nicht
+# nach GitHub. Die Datensicherung (CSV) macht Murat weiterhin von Hand.
+#
+# Voraussetzung: Repository-Secret SUPABASE_DB_URL
+# (Supabase -> Project Settings -> Database -> Connection string ->
+#  Session pooler -> URI, mit echtem Passwort statt [YOUR-PASSWORD])
+
+on:
+  schedule:
+    - cron: '17 4 * * 1'      # montags 04:17 UTC
+  workflow_dispatch:           # Knopf zum manuellen Starten
+
+permissions:
+  contents: write
+
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Schema dumpen
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$DB_URL" ]; then
+            echo "FEHLER: Secret SUPABASE_DB_URL fehlt."
+            echo "Settings -> Secrets and variables -> Actions -> New repository secret"
+            exit 1
+          fi
+          mkdir -p backup
+
+          # Struktur des public-Schemas
+          docker run --rm -e DB_URL -e PGSSLMODE=require postgres:17 \
+            sh -c 'pg_dump "$DB_URL" --schema-only --schema=public \
+                   --no-owner --no-privileges' > backup/schema.sql
+
+          # Cron-Jobs stehen als Zeilen in cron.job, die faengt pg_dump nicht
+          {
+            echo ""
+            echo "-- ==================================================="
+            echo "-- Cron-Jobs (Stand $(date -u +%F))"
+            echo "-- ==================================================="
+          } >> backup/schema.sql
+          docker run --rm -e DB_URL -e PGSSLMODE=require postgres:17 \
+            sh -c 'psql "$DB_URL" -At -F" | " -c \
+              "select jobid, jobname, schedule, active, command from cron.job order by jobid"' \
+            | sed 's/^/-- /' >> backup/schema.sql || \
+            echo "-- (cron.job nicht lesbar)" >> backup/schema.sql
+
+          echo "Zeilen im Dump: $(wc -l < backup/schema.sql)"
+
+      - name: Sicherheitsnetz - keine Kundendaten im Dump
+        run: |
+          # schema-only sollte keine INSERT/COPY-Daten enthalten.
+          if grep -qiE '^(INSERT INTO|COPY .* FROM stdin)' backup/schema.sql; then
+            echo "ABBRUCH: Der Dump enthaelt Daten, nicht nur Struktur."
+            exit 1
+          fi
+          echo "OK - nur Struktur."
+
+      - name: Committen
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add backup/schema.sql
+          if git diff --staged --quiet; then
+            echo "Keine Aenderung am Schema - nichts zu committen."
+          else
+            git commit -m "Schema-Backup $(date -u +%F)"
+            git push
+          fi
