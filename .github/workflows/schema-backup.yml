@@ -48,9 +48,12 @@ jobs:
           PG="docker run --rm -e PGHOST -e PGPORT -e PGUSER -e PGDATABASE
               -e PGPASSWORD -e PGSSLMODE postgres:17"
 
-          # Struktur des public-Schemas
+          # Struktur des public-Schemas.
+          # --no-privileges ist bewusst NICHT gesetzt: ohne die GRANT-Zeilen
+          # waere ein wiederhergestelltes Schema rechtlos, anon und
+          # authenticated kaemen an gar nichts mehr.
           $PG pg_dump --schema-only --schema=public \
-                      --no-owner --no-privileges > backup/schema.sql
+                      --no-owner > backup/schema.sql
 
           # Cron-Jobs stehen als Zeilen in cron.job, die faengt pg_dump nicht
           {
